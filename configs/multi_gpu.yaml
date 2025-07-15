@@ -1,0 +1,7 @@
+defaults:
+  - base_config
+  - distributed
+
+training:
+  batch_size: 32
+  lr: 2e-3
