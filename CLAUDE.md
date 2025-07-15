@@ -32,8 +32,11 @@ pip install -r requirements.txt
 # Test environment setup
 python pytorch-test-setup.py
 
-# Download LibriSpeech dataset
+# Download LibriSpeech dataset (optional - HuggingFace datasets used by default)
 python scripts/download_data.py --subset clean-100 --save_dir ./data
+
+# Run the demo notebook for complete walkthrough
+jupyter notebook notebooks/lmu_asr_demo.ipynb
 ```
 
 ### Training Commands
@@ -61,10 +64,11 @@ All training configurations use Hydra with YAML files in `configs/`:
 ## Architecture Overview
 
 ### Core Components
-1. **LMU Encoder** (`src/models/lmu_encoder.py`) - Stack of LMU layers for temporal modeling
-2. **ASR Model** (`src/models/asr_model.py`) - Complete ASR system with CTC decoder
-3. **Data Pipeline** (`src/data/`) - LibriSpeech dataset processing and mel-spectrogram conversion
-4. **Training Logic** (`src/training/`) - Single GPU and distributed training implementations
+1. **LMU Encoder** (`src/models/lmu_encoder.py`) - Stack of LMU layers for temporal modeling with optional downsampling
+2. **ASR Model** (`src/models/asr_model.py`) - Complete ASR system with CTC decoder, beam search, and loss computation
+3. **Data Pipeline** (`src/data/`) - LibriSpeech dataset processing, mel-spectrogram conversion, and SpecAugment
+4. **Training Logic** (`src/training/`) - Single GPU and distributed training with mixed precision and early stopping
+5. **Demo Notebook** (`notebooks/lmu_asr_demo.ipynb`) - Complete end-to-end workflow demonstration
 
 ### Configuration System
 - **Dataclass-based config** in `src/config/config.py` with OmegaConf integration
@@ -90,12 +94,13 @@ All training configurations use Hydra with YAML files in `configs/`:
 - **Synchronization**: Synchronized batch normalization across GPUs
 
 ## Current Implementation Status
-The repository contains a well-structured foundation but is missing core implementations:
+The repository contains a complete, fully functional LMU-based ASR system:
 - ✅ Configuration system, training scripts, project structure
-- ❌ LMU encoder and ASR model implementations
-- ❌ Data loading and preprocessing pipeline
-- ❌ Training loop and distributed training logic
-- ❌ Evaluation and checkpointing utilities
+- ✅ LMU encoder and ASR model implementations
+- ✅ Data loading and preprocessing pipeline
+- ✅ Training loop and distributed training logic
+- ✅ Evaluation and checkpointing utilities
+- ✅ Complete demo notebook with end-to-end workflow
 
 ## Development Guidelines
 - **LMU Variants**: Use standard LMU for variable sequences, LMUFFT for fixed-length sequences
@@ -108,3 +113,13 @@ The repository contains a well-structured foundation but is missing core impleme
 - **Single GPU**: <15% WER on LibriSpeech clean test
 - **Multi-GPU**: Same accuracy with linear speedup up to 4-8 GPUs
 - **Scaling**: Efficient scaling for production workloads
+- **Demo Model**: Reduced configuration for fast experimentation and learning
+
+## Quick Start
+For immediate hands-on experience, run the demo notebook:
+```bash
+cd notebooks
+jupyter notebook lmu_asr_demo.ipynb
+```
+
+This notebook provides a complete walkthrough from setup to inference with a smaller model configuration suitable for learning and experimentation.
