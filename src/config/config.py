@@ -13,6 +13,10 @@ class ModelConfig:
     dropout: float = 0.1
     use_fft_lmu: bool = False
     vocab_size: int = 29
+    use_attention: bool = True
+    num_attention_heads: int = 8
+    use_downsampling: bool = False
+    downsample_factor: int = 2
 
 
 @dataclass

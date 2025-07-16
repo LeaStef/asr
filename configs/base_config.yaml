@@ -7,6 +7,10 @@ model:
     theta: 1000
     dropout: 0.1
     use_fft_lmu: false
+    use_attention: true
+    num_attention_heads: 8
+    use_downsampling: false
+    downsample_factor: 2
   decoder:
     vocab_size: 29
   

@@ -4,8 +4,118 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'pytor
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import math
 from typing import Tuple, Optional
 from lmu import LMU, LMUFFT
+
+
+class MultiHeadAttention(nn.Module):
+    """
+    Multi-head attention mechanism for sequence modeling.
+    """
+    
+    def __init__(self, d_model: int, num_heads: int = 8, dropout: float = 0.1):
+        """
+        Initialize multi-head attention.
+        
+        Args:
+            d_model: Model dimension
+            num_heads: Number of attention heads
+            dropout: Dropout rate
+        """
+        super(MultiHeadAttention, self).__init__()
+        
+        assert d_model % num_heads == 0
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
+        
+        self.w_q = nn.Linear(d_model, d_model)
+        self.w_k = nn.Linear(d_model, d_model)
+        self.w_v = nn.Linear(d_model, d_model)
+        self.w_o = nn.Linear(d_model, d_model)
+        
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(d_model)
+        
+    def forward(self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, 
+                mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Forward pass through multi-head attention.
+        
+        Args:
+            query: Query tensor (batch_size, seq_len, d_model)
+            key: Key tensor (batch_size, seq_len, d_model)
+            value: Value tensor (batch_size, seq_len, d_model)
+            mask: Optional attention mask
+            
+        Returns:
+            output: Attention output (batch_size, seq_len, d_model)
+        """
+        batch_size, seq_len, d_model = query.size()
+        
+        # Store residual connection
+        residual = query
+        
+        # Linear transformations
+        Q = self.w_q(query).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = self.w_k(key).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = self.w_v(value).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # Scaled dot-product attention
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
+        
+        # Apply mask if provided
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+        
+        attention_weights = F.softmax(scores, dim=-1)
+        attention_weights = self.dropout(attention_weights)
+        
+        # Apply attention to values
+        context = torch.matmul(attention_weights, V)
+        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
+        
+        # Output projection
+        output = self.w_o(context)
+        
+        # Residual connection and layer norm
+        output = self.layer_norm(output + residual)
+        
+        return output
+
+
+class SelfAttention(nn.Module):
+    """
+    Self-attention layer for sequence modeling.
+    """
+    
+    def __init__(self, d_model: int, num_heads: int = 8, dropout: float = 0.1):
+        """
+        Initialize self-attention layer.
+        
+        Args:
+            d_model: Model dimension
+            num_heads: Number of attention heads
+            dropout: Dropout rate
+        """
+        super(SelfAttention, self).__init__()
+        self.attention = MultiHeadAttention(d_model, num_heads, dropout)
+        
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Forward pass through self-attention.
+        
+        Args:
+            x: Input tensor (batch_size, seq_len, d_model)
+            mask: Optional attention mask
+            
+        Returns:
+            output: Self-attention output (batch_size, seq_len, d_model)
+        """
+        return self.attention(x, x, x, mask)
 
 
 class LMUEncoder(nn.Module):
@@ -24,7 +134,9 @@ class LMUEncoder(nn.Module):
                  theta: float = 128,
                  dropout: float = 0.1,
                  use_fft_lmu: bool = False,
-                 seq_len: Optional[int] = None):
+                 seq_len: Optional[int] = None,
+                 use_attention: bool = True,
+                 num_attention_heads: int = 8):
         """
         Initialize LMU encoder.
         
@@ -37,6 +149,8 @@ class LMUEncoder(nn.Module):
             dropout: Dropout rate
             use_fft_lmu: Whether to use FFT-based LMU (requires fixed seq_len)
             seq_len: Sequence length (required for FFT-based LMU)
+            use_attention: Whether to use attention layers before LMU layers
+            num_attention_heads: Number of attention heads
         """
         super(LMUEncoder, self).__init__()
         
@@ -48,6 +162,8 @@ class LMUEncoder(nn.Module):
         self.dropout = dropout
         self.use_fft_lmu = use_fft_lmu
         self.seq_len = seq_len
+        self.use_attention = use_attention
+        self.num_attention_heads = num_attention_heads
         
         if use_fft_lmu and seq_len is None:
             raise ValueError("seq_len must be specified when using FFT-based LMU")
@@ -55,11 +171,24 @@ class LMUEncoder(nn.Module):
         # Input projection layer
         self.input_projection = nn.Linear(input_size, hidden_size)
         
-        # Stack of LMU layers
+        # Stack of attention and LMU layers
+        self.attention_layers = nn.ModuleList()
         self.lmu_layers = nn.ModuleList()
         self.layer_norms = nn.ModuleList()
         
         for i in range(num_lmu_layers):
+            # Add attention layer before each LMU layer
+            if use_attention:
+                attention_layer = SelfAttention(
+                    d_model=hidden_size,
+                    num_heads=num_attention_heads,
+                    dropout=dropout
+                )
+                self.attention_layers.append(attention_layer)
+            else:
+                self.attention_layers.append(None)
+            
+            # Add LMU layer
             if use_fft_lmu:
                 # FFT-based LMU (faster for fixed sequence length)
                 lmu_layer = LMUFFT(
@@ -89,7 +218,7 @@ class LMUEncoder(nn.Module):
         
     def forward(self, x: torch.Tensor, lengths: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, list]:
         """
-        Forward pass through LMU encoder.
+        Forward pass through attention-enhanced LMU encoder.
         
         Args:
             x: Input tensor of shape (batch_size, seq_len, input_size)
@@ -102,10 +231,24 @@ class LMUEncoder(nn.Module):
         # Input projection
         x = self.input_projection(x)  # (batch_size, seq_len, hidden_size)
         
+        # Create attention mask if lengths provided
+        attention_mask = None
+        if lengths is not None:
+            batch_size, seq_len = x.shape[:2]
+            attention_mask = torch.zeros(batch_size, seq_len, seq_len, device=x.device)
+            for i, length in enumerate(lengths):
+                attention_mask[i, :length, :length] = 1
+        
         memory_states = []
         
-        # Pass through LMU layers
-        for i, (lmu_layer, layer_norm) in enumerate(zip(self.lmu_layers, self.layer_norms)):
+        # Pass through attention and LMU layers
+        for i, (attention_layer, lmu_layer, layer_norm) in enumerate(zip(self.attention_layers, self.lmu_layers, self.layer_norms)):
+            
+            # Apply attention before LMU if enabled
+            if self.use_attention and attention_layer is not None:
+                x = attention_layer(x, attention_mask)
+            
+            # Apply LMU layer
             if self.use_fft_lmu:
                 # FFT-based LMU returns (output, final_hidden)
                 x, h_n = lmu_layer(x)
@@ -144,6 +287,8 @@ class DownsamplingLMUEncoder(LMUEncoder):
                  dropout: float = 0.1,
                  use_fft_lmu: bool = False,
                  seq_len: Optional[int] = None,
+                 use_attention: bool = True,
+                 num_attention_heads: int = 8,
                  downsample_factor: int = 2):
         """
         Initialize downsampling LMU encoder.
@@ -160,7 +305,9 @@ class DownsamplingLMUEncoder(LMUEncoder):
             theta=theta,
             dropout=dropout,
             use_fft_lmu=use_fft_lmu,
-            seq_len=seq_len
+            seq_len=seq_len,
+            use_attention=use_attention,
+            num_attention_heads=num_attention_heads
         )
         
         self.downsample_factor = downsample_factor
@@ -176,7 +323,7 @@ class DownsamplingLMUEncoder(LMUEncoder):
     
     def forward(self, x: torch.Tensor, lengths: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, list]:
         """
-        Forward pass with downsampling.
+        Forward pass with downsampling and attention.
         
         Args:
             x: Input tensor of shape (batch_size, seq_len, input_size)
@@ -189,11 +336,25 @@ class DownsamplingLMUEncoder(LMUEncoder):
         # Input projection
         x = self.input_projection(x)  # (batch_size, seq_len, hidden_size)
         
+        # Create attention mask if lengths provided
+        attention_mask = None
+        if lengths is not None:
+            batch_size, seq_len = x.shape[:2]
+            attention_mask = torch.zeros(batch_size, seq_len, seq_len, device=x.device)
+            for i, length in enumerate(lengths):
+                attention_mask[i, :length, :length] = 1
+        
         memory_states = []
         downsample_idx = 0
         
-        # Pass through LMU layers with downsampling
-        for i, (lmu_layer, layer_norm) in enumerate(zip(self.lmu_layers, self.layer_norms)):
+        # Pass through attention and LMU layers with downsampling
+        for i, (attention_layer, lmu_layer, layer_norm) in enumerate(zip(self.attention_layers, self.lmu_layers, self.layer_norms)):
+            
+            # Apply attention before LMU if enabled
+            if self.use_attention and attention_layer is not None:
+                x = attention_layer(x, attention_mask)
+            
+            # Apply LMU layer
             if self.use_fft_lmu:
                 # FFT-based LMU returns (output, final_hidden)
                 x, h_n = lmu_layer(x)
@@ -218,6 +379,15 @@ class DownsamplingLMUEncoder(LMUEncoder):
                 # Update lengths if provided
                 if lengths is not None:
                     lengths = lengths // self.downsample_factor
+                
+                # Update attention mask for new sequence length
+                if attention_mask is not None:
+                    new_seq_len = x.shape[1]
+                    batch_size = x.shape[0]
+                    attention_mask = torch.zeros(batch_size, new_seq_len, new_seq_len, device=x.device)
+                    if lengths is not None:
+                        for j, length in enumerate(lengths):
+                            attention_mask[j, :length, :length] = 1
         
         # Output projection
         encoded = self.output_projection(x)

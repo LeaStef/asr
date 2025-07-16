@@ -64,11 +64,11 @@ All training configurations use Hydra with YAML files in `configs/`:
 ## Architecture Overview
 
 ### Core Components
-1. **LMU Encoder** (`src/models/lmu_encoder.py`) - Stack of LMU layers for temporal modeling with optional downsampling
+1. **LMU Encoder** (`src/models/lmu_encoder.py`) - Stack of LMU layers with multi-head self-attention for enhanced temporal modeling
 2. **ASR Model** (`src/models/asr_model.py`) - Complete ASR system with CTC decoder, beam search, and loss computation
 3. **Data Pipeline** (`src/data/`) - LibriSpeech dataset processing, mel-spectrogram conversion, and SpecAugment
 4. **Training Logic** (`src/training/`) - Single GPU and distributed training with mixed precision and early stopping
-5. **Demo Notebook** (`notebooks/lmu_asr_demo.ipynb`) - Complete end-to-end workflow demonstration
+5. **Demo Notebook** (`notebooks/lmu_asr_demo.ipynb`) - Complete end-to-end workflow demonstration with attention analysis
 
 ### Configuration System
 - **Dataclass-based config** in `src/config/config.py` with OmegaConf integration
@@ -77,7 +77,8 @@ All training configurations use Hydra with YAML files in `configs/`:
 
 ### Key Architecture Decisions
 - **Features**: 80-dimensional mel-spectrograms (16kHz audio, 25ms window, 10ms hop)
-- **Model**: LMU encoder (4 layers, 512 hidden units, 256 memory units) + CTC decoder
+- **Model**: Attention-enhanced LMU encoder (4 layers, 512 hidden units, 256 memory units) + CTC decoder
+- **Attention**: Multi-head self-attention (8 heads) before each LMU layer with proper masking
 - **Vocabulary**: 29 characters (26 letters + space + apostrophe + CTC blank)
 - **Training**: Mixed precision, gradient clipping, distributed data parallel
 

@@ -77,6 +77,8 @@ class LMUASRModel(nn.Module):
                 dropout=config.dropout,
                 use_fft_lmu=config.use_fft_lmu,
                 seq_len=getattr(config, 'seq_len', None),
+                use_attention=getattr(config, 'use_attention', True),
+                num_attention_heads=getattr(config, 'num_attention_heads', 8),
                 downsample_factor=getattr(config, 'downsample_factor', 2)
             )
         else:
@@ -88,7 +90,9 @@ class LMUASRModel(nn.Module):
                 theta=config.theta,
                 dropout=config.dropout,
                 use_fft_lmu=config.use_fft_lmu,
-                seq_len=getattr(config, 'seq_len', None)
+                seq_len=getattr(config, 'seq_len', None),
+                use_attention=getattr(config, 'use_attention', True),
+                num_attention_heads=getattr(config, 'num_attention_heads', 8)
             )
         
         # Create CTC decoder
