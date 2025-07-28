@@ -40,6 +40,8 @@ class TrainingConfig:
     mixed_precision: bool = True
     gradient_clip_norm: float = 1.0
     accumulate_grad_batches: int = 1
+    warmup_steps: int = 1000
+    weight_decay: float = 0.01
 
 
 @dataclass
