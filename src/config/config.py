@@ -42,6 +42,7 @@ class TrainingConfig:
     accumulate_grad_batches: int = 1
     warmup_steps: int = 1000
     weight_decay: float = 0.01
+    log_interval: int = 100
 
 
 @dataclass
