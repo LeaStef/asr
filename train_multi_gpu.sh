@@ -75,21 +75,38 @@ echo "Starting distributed training..."
 echo "=============================="
 
 # Multi-GPU training with torchrun
-# Estimated training time: ~3 days for GigaSpeech 'm' subset with RTX 6000
+# Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
+echo "Training configuration:"
+echo "  GPUs: 2x RTX 6000 Ada Generation"
+echo "  Dataset: GigaSpeech subset 'm' (~1000 hours)"
+echo "  Preset: rtx6000-2gpu (80 batch size, 3e-3 LR, 16 workers)"
+echo "  Epochs: 20 (optimal for 'm' subset)"
+echo "  Optimizations: 500 token sequences, distributed training"
+echo "  Estimated time: ~5-7 days (3-4 hours per epoch)"
 echo "  Checkpoints saved every epoch to ./outputs/checkpoints/"
 
 torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --preset rtx6000-2gpu \
     --output-dir ./outputs \
     --dataset gigaspeech \
-    --subset xs
+    --subset m \
+    --epochs 20
 
-# For larger dataset training, use 's' subset instead:
+# For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \
 #     --preset rtx6000-2gpu \
 #     --output-dir ./outputs \
 #     --dataset gigaspeech \
-#     --subset s
+#     --subset xs \
+#     --epochs 5
+
+# For even larger dataset training, use 'l' subset:
+# torchrun --nproc_per_node=2 scripts/train_flexible.py \
+#     --preset rtx6000-2gpu \
+#     --output-dir ./outputs \
+#     --dataset gigaspeech \
+#     --subset l \
+#     --epochs 15
 
 # Alternative: Use the torchrun-specific script
 # torchrun --nproc_per_node=2 scripts/train_torchrun.py
