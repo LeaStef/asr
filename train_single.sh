@@ -27,20 +27,31 @@ echo "=============================="
 
 # Set up environment
 log_dir=$HOME/asr
+mkdir -p $log_dir
 cd $log_dir
 
 echo "Working directory: $(pwd)"
-echo "Activating conda environment..."
+echo "Activating virtual environment..."
 
 # Load up your virtual environment  
 # Set up environment on watgpu.cs or in interactive session (use `source` keyword)
-source asr/bin/activate
+# Assuming venv is in asr/venv/ or asr/bin/activate
+if [ -f "$log_dir/venv/bin/activate" ]; then
+    source $log_dir/venv/bin/activate
+elif [ -f "$log_dir/bin/activate" ]; then
+    source $log_dir/bin/activate
+else
+    echo "Warning: Virtual environment not found. Please check the path."
+fi
 
 echo "Virtual environment activated: $VIRTUAL_ENV"
 echo "Python version: $(python --version)"
 echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
 echo "CUDA available: $(python -c 'import torch; print(torch.cuda.is_available())')"
 echo "GPU count: $(python -c 'import torch; print(torch.cuda.device_count())')"
+
+# Already in project directory ($HOME/asr)
+echo "Project directory: $(pwd)"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs
@@ -49,19 +60,27 @@ echo "=============================="
 echo "Starting single GPU training..."
 echo "=============================="
 
-# RTX 6000 Single GPU training
+# RTX 6000 Single GPU training with optimizations
 echo "Training configuration:"
 echo "  GPU: RTX 6000 Ada Generation (48GB)"
-echo "  Dataset: GigaSpeech subset 'm' (~10k hours)"
-echo "  Preset: rtx6000-1gpu (96 batch size, 3e-3 LR, 30 epochs)"
-echo "  Estimated time: ~6 days"
+echo "  Dataset: GigaSpeech subset 'xs' (fast testing) or 's' (small)"
+echo "  Preset: rtx6000-1gpu (64 batch size, 2e-3 LR, 12 workers)"
+echo "  Optimizations: 500 token sequences, 16 data workers"
+echo "  Estimated time: ~2-4 hours per epoch"
 echo "  Checkpoints saved every epoch to ./outputs/checkpoints/"
 
 python scripts/train_flexible.py \
     --preset rtx6000-1gpu \
     --output-dir ./outputs \
     --dataset gigaspeech \
-    --subset m
+    --subset xs
+
+# For larger dataset training, use 's' or 'm' subset instead:
+# python scripts/train_flexible.py \
+#     --preset rtx6000-1gpu \
+#     --output-dir ./outputs \
+#     --dataset gigaspeech \
+#     --subset s
 
 
 echo "=============================="
