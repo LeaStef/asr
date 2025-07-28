@@ -150,6 +150,7 @@ class DistributedTrainer:
                 if torch.isnan(loss).any():
                     if is_main_process():
                         print(f"WARNING: NaN loss detected at step {self.global_step}, skipping batch")
+                    self.optimizer.zero_grad()  # Clear gradients before continuing
                     continue
                 
                 # Backward pass
@@ -157,6 +158,8 @@ class DistributedTrainer:
                 
                 # Gradient clipping and monitoring
                 grad_norm = None
+                skip_step = False
+                
                 if hasattr(self.training_config, 'gradient_clip_norm'):
                     self.scaler.unscale_(self.optimizer)
                     # Calculate gradient norm before clipping
@@ -171,13 +174,20 @@ class DistributedTrainer:
                     if torch.isnan(torch.tensor(grad_norm)):
                         if is_main_process():
                             print(f"WARNING: NaN gradients detected at step {self.global_step}, skipping batch")
-                        continue
-                    
-                    gradient_clipping(self.model, self.training_config.gradient_clip_norm)
+                        skip_step = True
+                    else:
+                        gradient_clipping(self.model, self.training_config.gradient_clip_norm)
                 
                 # Optimizer step
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                if skip_step:
+                    # Must call step and update even when skipping to reset scaler state
+                    self.scaler.step(self.optimizer)  # This will be a no-op due to NaN gradients
+                    self.scaler.update()
+                    self.optimizer.zero_grad()
+                    continue
+                else:
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
             else:
                 # Regular forward pass
                 log_probs, _ = self.model(spectrograms, input_lengths)
@@ -189,6 +199,7 @@ class DistributedTrainer:
                 if torch.isnan(loss).any():
                     if is_main_process():
                         print(f"WARNING: NaN loss detected at step {self.global_step}, skipping batch")
+                    self.optimizer.zero_grad()
                     continue
                 
                 # Backward pass
@@ -196,6 +207,8 @@ class DistributedTrainer:
                 
                 # Gradient clipping and monitoring
                 grad_norm = None
+                skip_step = False
+                
                 if hasattr(self.training_config, 'gradient_clip_norm'):
                     # Calculate gradient norm before clipping
                     total_norm = 0.0
@@ -209,12 +222,13 @@ class DistributedTrainer:
                     if torch.isnan(torch.tensor(grad_norm)):
                         if is_main_process():
                             print(f"WARNING: NaN gradients detected at step {self.global_step}, skipping batch")
-                        continue
-                    
-                    gradient_clipping(self.model, self.training_config.gradient_clip_norm)
+                        skip_step = True
+                    else:
+                        gradient_clipping(self.model, self.training_config.gradient_clip_norm)
                 
                 # Optimizer step
-                self.optimizer.step()
+                if not skip_step:
+                    self.optimizer.step()
             
             # Update learning rate
             current_lr = self.lr_scheduler.step()
