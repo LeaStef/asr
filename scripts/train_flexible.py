@@ -88,17 +88,17 @@ def get_preset_config(preset: str) -> dict:
             'mixed_precision': True,
         },
         'rtx6000-1gpu': {
-            'batch_size': 96,
-            'lr': 3e-3,
+            'batch_size': 64,  # Reduced for better performance
+            'lr': 2e-3,        # Slightly reduced LR
             'epochs': 30,
-            'num_workers': 8,
+            'num_workers': 12, # Increased workers
             'mixed_precision': True,
         },
         'rtx6000-2gpu': {
-            'batch_size': 96,
-            'lr': 5e-3,
+            'batch_size': 80,  # Reduced from 96 for better performance
+            'lr': 3e-3,        # Reduced from 5e-3
             'epochs': 25,
-            'num_workers': 12,
+            'num_workers': 16, # Increased from 12
             'mixed_precision': True,
         },
         'default': {
