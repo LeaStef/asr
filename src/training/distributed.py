@@ -2,17 +2,17 @@ import torch
 import torch.nn as nn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 import os
 import time
 from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import numpy as np
 
-from ..config.distributed_config import (
+from config.distributed_config import (
     get_rank, get_world_size, is_main_process, reduce_tensor
 )
-from .utils import (
+from training.utils import (
     EarlyStopping, LearningRateScheduler, MetricsTracker, 
     save_checkpoint, load_checkpoint, compute_wer, compute_cer,
     decode_predictions, decode_targets, gradient_clipping,
@@ -32,13 +32,15 @@ class DistributedTrainer:
         
         Args:
             model: LMU ASR model (should be wrapped with DDP)
-            config: Configuration object
+            config: Configuration object (full config with training, data, model)
             rank: Process rank
             world_size: Total number of processes
             log_dir: Directory for logs and checkpoints
         """
         self.model = model
         self.config = config
+        self.training_config = config.training if hasattr(config, 'training') else config
+        self.data_config = config.data if hasattr(config, 'data') else None
         self.rank = rank
         self.world_size = world_size
         self.log_dir = log_dir
@@ -54,18 +56,18 @@ class DistributedTrainer:
         # Initialize learning rate scheduler
         self.lr_scheduler = LearningRateScheduler(
             self.optimizer,
-            warmup_steps=getattr(config, 'warmup_steps', 1000),
-            max_lr=config.lr,
-            decay_steps=getattr(config, 'decay_steps', 10000),
-            decay_rate=getattr(config, 'decay_rate', 0.96)
+            warmup_steps=getattr(self.training_config, 'warmup_steps', 1000),
+            max_lr=self.training_config.lr,
+            decay_steps=getattr(self.training_config, 'decay_steps', 10000),
+            decay_rate=getattr(self.training_config, 'decay_rate', 0.96)
         )
         
         # Initialize mixed precision scaler
-        self.scaler = GradScaler() if config.mixed_precision else None
+        self.scaler = GradScaler('cuda') if self.training_config.mixed_precision else None
         
         # Initialize early stopping (only on main process)
         self.early_stopping = EarlyStopping(
-            patience=config.patience,
+            patience=self.training_config.patience,
             min_delta=0.001,
             mode='min'
         ) if is_main_process() else None
@@ -80,23 +82,26 @@ class DistributedTrainer:
         
         # Log model summary (only on main process)
         if is_main_process():
-            log_model_summary(model.module, (config.max_seq_len, config.n_mels), self.device)
+            # Get the underlying model (handle both DDP and non-DDP cases)
+            underlying_model = model.module if hasattr(model, 'module') else model
+            if self.data_config:
+                log_model_summary(underlying_model, (self.data_config.max_seq_len, self.data_config.n_mels), self.device)
     
     def _create_optimizer(self) -> torch.optim.Optimizer:
         """Create optimizer."""
-        if hasattr(self.config, 'optimizer') and self.config.optimizer == 'adamw':
+        if hasattr(self.training_config, 'optimizer') and self.training_config.optimizer == 'adamw':
             return torch.optim.AdamW(
                 self.model.parameters(),
-                lr=self.config.lr,
+                lr=self.training_config.lr,
                 betas=(0.9, 0.999),
-                weight_decay=getattr(self.config, 'weight_decay', 0.01)
+                weight_decay=getattr(self.training_config, 'weight_decay', 0.01)
             )
         else:
             return torch.optim.Adam(
                 self.model.parameters(),
-                lr=self.config.lr,
+                lr=self.training_config.lr,
                 betas=(0.9, 0.999),
-                weight_decay=getattr(self.config, 'weight_decay', 0.0)
+                weight_decay=getattr(self.training_config, 'weight_decay', 0.0)
             )
     
     def train_epoch(self, train_loader, vocab: Dict) -> float:
@@ -135,17 +140,40 @@ class DistributedTrainer:
             
             # Forward pass with mixed precision
             if self.scaler is not None:
-                with autocast():
+                with autocast('cuda'):
                     log_probs, _ = self.model(spectrograms, input_lengths)
-                    loss = self.model.module.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                    # Get underlying model for loss computation
+                    underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                    loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                
+                # Check for NaN loss
+                if torch.isnan(loss).any():
+                    if is_main_process():
+                        print(f"WARNING: NaN loss detected at step {self.global_step}, skipping batch")
+                    continue
                 
                 # Backward pass
                 self.scaler.scale(loss).backward()
                 
-                # Gradient clipping
-                if hasattr(self.config, 'gradient_clip_norm'):
+                # Gradient clipping and monitoring
+                grad_norm = None
+                if hasattr(self.training_config, 'gradient_clip_norm'):
                     self.scaler.unscale_(self.optimizer)
-                    gradient_clipping(self.model, self.config.gradient_clip_norm)
+                    # Calculate gradient norm before clipping
+                    total_norm = 0.0
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2)
+                            total_norm += param_norm.item() ** 2
+                    grad_norm = total_norm ** (1. / 2)
+                    
+                    # Check for NaN gradients
+                    if torch.isnan(torch.tensor(grad_norm)):
+                        if is_main_process():
+                            print(f"WARNING: NaN gradients detected at step {self.global_step}, skipping batch")
+                        continue
+                    
+                    gradient_clipping(self.model, self.training_config.gradient_clip_norm)
                 
                 # Optimizer step
                 self.scaler.step(self.optimizer)
@@ -153,14 +181,37 @@ class DistributedTrainer:
             else:
                 # Regular forward pass
                 log_probs, _ = self.model(spectrograms, input_lengths)
-                loss = self.model.module.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                # Get underlying model for loss computation
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                
+                # Check for NaN loss
+                if torch.isnan(loss).any():
+                    if is_main_process():
+                        print(f"WARNING: NaN loss detected at step {self.global_step}, skipping batch")
+                    continue
                 
                 # Backward pass
                 loss.backward()
                 
-                # Gradient clipping
-                if hasattr(self.config, 'gradient_clip_norm'):
-                    gradient_clipping(self.model, self.config.gradient_clip_norm)
+                # Gradient clipping and monitoring
+                grad_norm = None
+                if hasattr(self.training_config, 'gradient_clip_norm'):
+                    # Calculate gradient norm before clipping
+                    total_norm = 0.0
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2)
+                            total_norm += param_norm.item() ** 2
+                    grad_norm = total_norm ** (1. / 2)
+                    
+                    # Check for NaN gradients
+                    if torch.isnan(torch.tensor(grad_norm)):
+                        if is_main_process():
+                            print(f"WARNING: NaN gradients detected at step {self.global_step}, skipping batch")
+                        continue
+                    
+                    gradient_clipping(self.model, self.training_config.gradient_clip_norm)
                 
                 # Optimizer step
                 self.optimizer.step()
@@ -175,14 +226,17 @@ class DistributedTrainer:
             
             # Update progress bar (only on main process)
             if is_main_process():
-                progress_bar.set_postfix({
+                postfix = {
                     'Loss': f"{loss.item():.4f}",
                     'Avg Loss': f"{total_loss / num_batches:.4f}",
                     'LR': f"{current_lr:.6f}"
-                })
+                }
+                if grad_norm is not None:
+                    postfix['Grad Norm'] = f"{grad_norm:.4f}"
+                progress_bar.set_postfix(postfix)
             
             # Log metrics (only on main process)
-            if is_main_process() and self.global_step % getattr(self.config, 'log_interval', 100) == 0:
+            if is_main_process() and self.global_step % getattr(self.training_config, 'log_interval', 100) == 0:
                 self.metrics_tracker.update(
                     train_loss=loss.item(),
                     learning_rate=current_lr
@@ -230,10 +284,12 @@ class DistributedTrainer:
                 
                 # Forward pass
                 log_probs, _ = self.model(spectrograms, input_lengths)
-                loss = self.model.module.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                # Get underlying model for loss and decode
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
                 
                 # Decode predictions
-                predictions = self.model.module.decode(log_probs, input_lengths)
+                predictions = underlying_model.decode(log_probs, input_lengths)
                 
                 # Convert to text
                 pred_texts = decode_predictions(predictions, vocab)
@@ -306,18 +362,18 @@ class DistributedTrainer:
             vocab: Vocabulary dictionary
         """
         if is_main_process():
-            print(f"Starting distributed training for {self.config.max_epochs} epochs...")
+            print(f"Starting distributed training for {self.training_config.max_epochs} epochs...")
             print(f"Training on {len(train_loader.dataset)} samples")
             print(f"Validating on {len(val_loader.dataset)} samples")
             print(f"Using {self.world_size} GPUs")
         
-        for epoch in range(self.config.max_epochs):
+        for epoch in range(self.training_config.max_epochs):
             self.epoch = epoch
             start_time = time.time()
             
             # Training
             if is_main_process():
-                print(f"\nEpoch {epoch + 1}/{self.config.max_epochs}")
+                print(f"\nEpoch {epoch + 1}/{self.training_config.max_epochs}")
             
             train_loss = self.train_epoch(train_loader, vocab)
             
@@ -351,8 +407,10 @@ class DistributedTrainer:
                     print(f"  New best WER: {val_wer:.4f}")
                 
                 checkpoint_path = os.path.join(self.log_dir, 'checkpoints', f'checkpoint_epoch_{epoch + 1}.pt')
+                # Get underlying model for checkpoint saving
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
                 save_checkpoint(
-                    self.model.module, self.optimizer, epoch + 1, val_loss,
+                    underlying_model, self.optimizer, epoch + 1, val_loss,
                     self.metrics_tracker.metrics, checkpoint_path, is_best
                 )
                 
@@ -370,7 +428,7 @@ class DistributedTrainer:
                 dist.barrier()
             
             # Print validation examples (only on main process)
-            if is_main_process() and epoch % getattr(self.config, 'example_interval', 5) == 0:
+            if is_main_process() and epoch % getattr(self.training_config, 'example_interval', 5) == 0:
                 self._print_examples(val_loader, vocab, num_examples=3)
         
         if is_main_process():
@@ -399,7 +457,8 @@ class DistributedTrainer:
                 log_probs, _ = self.model(spectrograms, input_lengths)
                 
                 # Decode predictions
-                predictions = self.model.module.decode(log_probs, input_lengths)
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                predictions = underlying_model.decode(log_probs, input_lengths)
                 
                 # Convert to text
                 pred_texts = decode_predictions(predictions, vocab)
@@ -429,7 +488,8 @@ class DistributedTrainer:
             print(f"Resuming distributed training from {checkpoint_path}")
         
         # Load checkpoint
-        checkpoint = load_checkpoint(checkpoint_path, self.model.module, self.optimizer)
+        underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+        checkpoint = load_checkpoint(checkpoint_path, underlying_model, self.optimizer)
         
         # Restore training state
         self.epoch = checkpoint['epoch']

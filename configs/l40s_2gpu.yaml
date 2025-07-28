@@ -1,0 +1,27 @@
+defaults:
+  - base_config
+  - distributed
+
+# Optimized configuration for 2x L40S GPUs (48GB each)
+training:
+  batch_size: 128        # Total batch size (64 per GPU)
+  lr: 8e-3              # Scaled learning rate (base 1e-3 × 8)
+  max_epochs: 25        # Fewer epochs due to larger batch size
+  patience: 8           # Reduced patience for larger batches
+  mixed_precision: true # Essential for optimal memory usage
+  gradient_clip_norm: 1.0
+  accumulate_grad_batches: 1
+  warmup_steps: 500     # Reduced warmup for larger batches
+  weight_decay: 0.01    # Slight regularization for large batches
+
+# Enhanced distributed settings for L40S
+distributed:
+  enabled: true
+  backend: "nccl"
+  find_unused_parameters: false
+  sync_batchnorm: true
+
+# Data loading optimized for high throughput
+data:
+  num_workers: 8        # More workers for faster data loading
+  pin_memory: true      # Pin memory for faster GPU transfer

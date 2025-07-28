@@ -104,6 +104,9 @@ class LMUASRModel(nn.Module):
         # CTC loss function
         self.ctc_loss = nn.CTCLoss(blank=config.vocab_size - 1, reduction='mean', zero_infinity=True)
         
+        # Initialize weights for numerical stability
+        self._init_weights()
+        
     def forward(self, spectrograms: torch.Tensor, input_lengths: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, list]:
         """
         Forward pass through ASR model.
@@ -141,8 +144,11 @@ class LMUASRModel(nn.Module):
         # CTC loss expects (seq_len, batch_size, vocab_size)
         log_probs = log_probs.transpose(0, 1)
         
-        # Flatten targets for CTC loss
-        targets = targets.view(-1)
+        # Concatenate targets for CTC loss (remove padding)
+        concatenated_targets = []
+        for i, length in enumerate(target_lengths):
+            concatenated_targets.extend(targets[i, :length].tolist())
+        targets = torch.tensor(concatenated_targets, dtype=torch.long, device=targets.device)
         
         # Compute CTC loss
         loss = self.ctc_loss(log_probs, targets, input_lengths, target_lengths)
@@ -259,6 +265,25 @@ class LMUASRModel(nn.Module):
         
         # Return best sequence
         return beam[0]['sequence']
+    
+    def _init_weights(self):
+        """Initialize weights for numerical stability."""
+        for name, module in self.named_modules():
+            if isinstance(module, nn.Linear):
+                # Xavier uniform initialization for linear layers
+                nn.init.xavier_uniform_(module.weight, gain=1.0)
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0.0)
+            elif isinstance(module, nn.LayerNorm):
+                # Standard initialization for layer norm
+                nn.init.constant_(module.bias, 0.0)
+                nn.init.constant_(module.weight, 1.0)
+        
+        # Special initialization for CTC projection layer - smaller weights
+        if hasattr(self.decoder, 'ctc_projection'):
+            nn.init.xavier_uniform_(self.decoder.ctc_projection.weight, gain=0.1)
+            if self.decoder.ctc_projection.bias is not None:
+                nn.init.constant_(self.decoder.ctc_projection.bias, 0.0)
     
     def get_num_params(self) -> int:
         """Get total number of parameters."""

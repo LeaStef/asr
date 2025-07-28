@@ -1,13 +1,18 @@
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'pytorch-lmu', 'src'))
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Tuple, Optional
-from lmu import LMU, LMUFFT
+
+# Import LMU from the local implementation
+try:
+    from ..lmu import LMU, LMUFFT
+except ImportError:
+    # Fallback for when running scripts from project root
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from lmu import LMU, LMUFFT
 
 
 class MultiHeadAttention(nn.Module):
@@ -69,7 +74,14 @@ class MultiHeadAttention(nn.Module):
         
         # Apply mask if provided
         if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
+            # Expand mask to match multi-head attention shape
+            # mask shape: (batch_size, seq_len, seq_len)
+            # scores shape: (batch_size, num_heads, seq_len, seq_len)
+            if mask.dim() == 3:
+                mask = mask.unsqueeze(1).expand(-1, self.num_heads, -1, -1)
+            # Use a smaller value for float16 compatibility
+            mask_value = -65504.0 if scores.dtype == torch.float16 else -1e9
+            scores = scores.masked_fill(mask == 0, mask_value)
         
         attention_weights = F.softmax(scores, dim=-1)
         attention_weights = self.dropout(attention_weights)

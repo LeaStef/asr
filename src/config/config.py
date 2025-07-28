@@ -12,7 +12,7 @@ class ModelConfig:
     theta: float = 1000.0
     dropout: float = 0.1
     use_fft_lmu: bool = False
-    vocab_size: int = 29
+    vocab_size: int = 31
     use_attention: bool = True
     num_attention_heads: int = 8
     use_downsampling: bool = False
@@ -21,8 +21,9 @@ class ModelConfig:
 
 @dataclass
 class DataConfig:
-    dataset: str = "librispeech"
-    subset: str = "clean-100"
+    dataset: str = "gigaspeech"
+    subset: str = "xs"
+    save_dir: str = "./data"
     sample_rate: int = 16000
     n_mels: int = 80
     max_seq_len: int = 1000

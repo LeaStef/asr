@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(python -c \"\nimport sys; sys.path.append(''src'')\nfrom config.config import create_config_from_dict\nfrom models.asr_model import create_model\nfrom omegaconf import OmegaConf\nimport torch\n\n# Test configuration loading\ncfg = OmegaConf.load(''configs/base_config.yaml'')\nconfig = create_config_from_dict(cfg)\nprint(f''Model vocab_size: {config.model.vocab_size}'')\n\n# Test model creation\nmodel = create_model(config.model)\nprint(f''Model created successfully'')\nprint(f''Total parameters: {model.get_num_params():,}'')\n\n# Test forward pass with dummy data\nbatch_size = 2\nseq_len = 100\nn_mels = 80\n\ndummy_spectrograms = torch.randn(batch_size, seq_len, n_mels)\ndummy_lengths = torch.tensor([seq_len, seq_len-10])\n\nwith torch.no_grad():\n    log_probs, memory_states = model(dummy_spectrograms, dummy_lengths)\n    print(f''Forward pass successful'')\n    print(f''Log probs shape: {log_probs.shape}'')\n    print(f''Expected shape: ({batch_size}, {seq_len}, {config.model.vocab_size})'')\n\")",
+      "Bash(python test:*)",
+      "Bash(timeout 30 python:*)",
+      "Bash(timeout:*)",
+      "Bash(HYDRA_FULL_ERROR=1 timeout 30 python scripts/train.py)",
+      "Bash(rm:*)",
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

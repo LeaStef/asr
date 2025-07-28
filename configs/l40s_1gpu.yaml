@@ -1,0 +1,19 @@
+defaults:
+  - base_config
+
+# Optimized configuration for single L40S GPU (48GB)
+training:
+  batch_size: 64        # Larger batch size for single L40S
+  lr: 4e-3             # Scaled learning rate (base 1e-3 × 4)
+  max_epochs: 35       # Adjusted for larger batch size
+  patience: 10         
+  mixed_precision: true # Essential for optimal memory usage
+  gradient_clip_norm: 1.0
+  accumulate_grad_batches: 1
+  warmup_steps: 750    # Adjusted warmup for larger batches
+  weight_decay: 0.01   # Slight regularization
+
+# Data loading optimized for single GPU
+data:
+  num_workers: 6       # Optimal for single GPU
+  pin_memory: true     # Pin memory for faster GPU transfer

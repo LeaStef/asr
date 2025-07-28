@@ -23,6 +23,12 @@ def train(cfg: DictConfig):
     # Create config object
     config = create_config_from_dict(cfg)
     
+    # Print dataset info
+    print(f"Using dataset: {config.data.dataset}")
+    if config.data.dataset == "gigaspeech":
+        print(f"GigaSpeech subset: {config.data.subset}")
+        print(f"Data directory: {config.data.save_dir}")
+    
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -31,13 +37,13 @@ def train(cfg: DictConfig):
     model = create_model(config.model).to(device)
     
     # Create data loaders
-    train_loader, val_loader, vocab = create_dataloaders(config.data)
+    train_loader, val_loader, vocab = create_dataloaders(config)
     
     # Update vocab size in config
     config.model.vocab_size = vocab['vocab_size']
     
     # Create trainer
-    trainer = Trainer(model, config.training, device)
+    trainer = Trainer(model, config.training, config.data, device)
     
     # Train model
     trainer.fit(train_loader, val_loader, vocab)

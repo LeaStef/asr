@@ -21,7 +21,7 @@ class Trainer:
     Single GPU trainer for LMU ASR model.
     """
     
-    def __init__(self, model: nn.Module, config, device: torch.device, 
+    def __init__(self, model: nn.Module, training_config, data_config, device: torch.device, 
                  log_dir: str = './logs'):
         """
         Initialize trainer.
@@ -33,7 +33,7 @@ class Trainer:
             log_dir: Directory for logs and checkpoints
         """
         self.model = model
-        self.config = config
+        self.config = training_config
         self.device = device
         self.log_dir = log_dir
         
@@ -46,18 +46,18 @@ class Trainer:
         # Initialize learning rate scheduler
         self.lr_scheduler = LearningRateScheduler(
             self.optimizer,
-            warmup_steps=getattr(config, 'warmup_steps', 1000),
-            max_lr=config.lr,
-            decay_steps=getattr(config, 'decay_steps', 10000),
-            decay_rate=getattr(config, 'decay_rate', 0.96)
+            warmup_steps=getattr(training_config, 'warmup_steps', 1000),
+            max_lr=training_config.lr,
+            decay_steps=getattr(training_config, 'decay_steps', 10000),
+            decay_rate=getattr(training_config, 'decay_rate', 0.96)
         )
         
         # Initialize mixed precision scaler
-        self.scaler = GradScaler() if config.mixed_precision else None
+        self.scaler = GradScaler() if training_config.mixed_precision else None
         
         # Initialize early stopping
         self.early_stopping = EarlyStopping(
-            patience=config.patience,
+            patience=training_config.patience,
             min_delta=0.001,
             mode='min'
         )
@@ -71,7 +71,7 @@ class Trainer:
         self.best_val_wer = float('inf')
         
         # Log model summary
-        log_model_summary(model, (config.max_seq_len, config.n_mels), device)
+        log_model_summary(model, (data_config.max_seq_len, data_config.n_mels), device)
     
     def _create_optimizer(self) -> optim.Optimizer:
         """Create optimizer."""

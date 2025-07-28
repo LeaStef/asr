@@ -36,7 +36,7 @@ def train_worker(rank: int, world_size: int, cfg: DictConfig):
     
     # Create distributed data loaders
     train_loader, val_loader, vocab = create_distributed_dataloaders(
-        config.data, rank, world_size
+        config, rank, world_size
     )
     
     # Update vocab size in config

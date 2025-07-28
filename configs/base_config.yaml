@@ -12,22 +12,25 @@ model:
     use_downsampling: false
     downsample_factor: 2
   decoder:
-    vocab_size: 29
-  
+    vocab_size: 32
+
 data:
-  dataset: "librispeech"
-  subset: "clean-100"
+  dataset: "gigaspeech"    
+  subset: "xs"
+  save_dir: "./data/gigaspeech"
   sample_rate: 16000
   n_mels: 80
   max_seq_len: 1000
   augment: true
   num_workers: 4
-  
+
 training:
   batch_size: 16
-  lr: 1e-3
+  lr: 1e-4  # Reduced learning rate for stability
   max_epochs: 50
   patience: 10
   mixed_precision: true
-  gradient_clip_norm: 1.0
+  gradient_clip_norm: 0.5  # Reduced gradient clipping for stability
   accumulate_grad_batches: 1
+  warmup_steps: 1000  # Add warmup for stability
+  weight_decay: 0.01  # Add weight decay for regularization

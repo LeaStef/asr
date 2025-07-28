@@ -8,49 +8,53 @@ import torchaudio
 import pandas as pd
 from tqdm import tqdm
 
+import torch
 
-def download_librispeech(subset: str = "clean-100", save_dir: str = "./data"):
+def download(subset: str = "clean-360", save_dir: str = '/home/ctnuser/pytorch-lmu-asr/data/LibriSpeech'):
     """Download LibriSpeech dataset and create manifest files"""
     
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
     
-    print(f"Downloading LibriSpeech {subset} dataset...")
+    # print(f"Downloading {subset} dataset...")
     
-    # Map subset names to actual dataset configs
-    subset_map = {
-        "clean-100": "clean",
-        "clean-360": "clean", 
-        "other-500": "other"
-    }
+    # # Map subset names to actual dataset configs
+    # subset_map = {
+    #     "clean-100": "clean",
+    #     "clean-360": "clean", 
+    #     "other-500": "other"
+    # }
     
-    if subset not in subset_map:
-        raise ValueError(f"Unknown subset: {subset}")
+    # if subset not in subset_map:
+    #     raise ValueError(f"Unknown subset: {subset}")
     
-    config = subset_map[subset]
+    # config = subset_map[subset]
     
     # Load training data
-    train_dataset = load_dataset("librispeech_asr", config, split="train.100")
+    train_dataset = load_dataset("facebook/voxpopuli", "en_accented", data_dir="/home/ctnuser/pytorch-lmu-asr/data" )#['train']
     
     # Load validation data
-    val_dataset = load_dataset("librispeech_asr", config, split="validation")
+    val_dataset = load_dataset("facebook/voxpopuli", "en_accented", data_dir="/home/ctnuser/pytorch-lmu-asr/data")
     
     # Load test data
-    test_dataset = load_dataset("librispeech_asr", config, split="test")
+    test_dataset = load_dataset("facebook/voxpopuli", "en_accented", data_dir="/home/ctnuser/pytorch-lmu-asr/data")
     
-    print(f"Train samples: {len(train_dataset)}")
-    print(f"Validation samples: {len(val_dataset)}")
-    print(f"Test samples: {len(test_dataset)}")
+    print(f"Train samples: {len(train_dataset['test'])}")
+    print(f"Validation samples: {len(val_dataset['test'])}")
+    print(f"Test samples: {len(test_dataset['test'])}")
     
     # Create manifest files
     def create_manifest(dataset, split_name):
         manifest_data = []
         
         print(f"Processing {split_name} split...")
-        for i, sample in enumerate(tqdm(dataset)):
-            audio_array = sample['audio']['array']
+        for i, sample in enumerate(tqdm(dataset['test'])):
+            # Get audio data
+            audio_array = torch.tensor(sample['audio']['array'])
             sample_rate = sample['audio']['sampling_rate']
-            text = sample['text']
+            
+            # Get text directly from the sample
+            text = sample['normalized_text']
             
             # Save audio file
             audio_dir = save_path / split_name / "audio"
@@ -61,7 +65,7 @@ def download_librispeech(subset: str = "clean-100", save_dir: str = "./data"):
             
             manifest_data.append({
                 'audio_path': str(audio_path),
-                'text': text.upper(),  # Convert to uppercase
+                'text': text.upper() if isinstance(text, str) else str(text).upper(),
                 'duration': len(audio_array) / sample_rate
             })
         
@@ -73,9 +77,13 @@ def download_librispeech(subset: str = "clean-100", save_dir: str = "./data"):
         print(f"Saved {len(manifest_data)} samples to {manifest_path}")
         return manifest_data
     
+    for i, sample in enumerate(tqdm(train_dataset['test'])):
+        print(sample.keys())
+        break 
+    
     # Create manifests for all splits
-    train_manifest = create_manifest(train_dataset, "train")
-    val_manifest = create_manifest(val_dataset, "val")
+    train_manifest = create_manifest(train_dataset, "test")
+    val_manifest = create_manifest(val_dataset, "test")
     test_manifest = create_manifest(test_dataset, "test")
     
     # Print statistics
@@ -110,16 +118,16 @@ def download_librispeech(subset: str = "clean-100", save_dir: str = "./data"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download and prepare LibriSpeech dataset")
-    parser.add_argument("--subset", type=str, default="clean-100", 
+    parser = argparse.ArgumentParser(description="Download and prepare  dataset")
+    parser.add_argument("--subset", type=str, default="", 
                        choices=["clean-100", "clean-360", "other-500"],
-                       help="LibriSpeech subset to download")
+                       help="Subset to download")
     parser.add_argument("--save_dir", type=str, default="./data",
                        help="Directory to save the dataset")
     
     args = parser.parse_args()
     
-    download_librispeech(args.subset, args.save_dir)
+    download(args.save_dir)
 
 
 if __name__ == "__main__":

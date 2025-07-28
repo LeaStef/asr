@@ -199,8 +199,9 @@ class TextPreprocessor:
             if char in self.char_to_idx:
                 indices.append(self.char_to_idx[char])
             else:
-                # Skip unknown characters
-                print(f"Warning: Unknown character '{char}' skipped")
+                # Skip unknown characters (silently for spaces to avoid spam)
+                if char != ' ' or len(indices) == 0:  # Only warn for first space or non-space chars
+                    pass  # Silent skip
                 continue
         
         return indices

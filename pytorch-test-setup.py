@@ -4,7 +4,12 @@ import torch.distributed as dist
 import torchaudio
 import librosa
 import numpy as np
+import os
+import sys
+
+sys.path.append(str(os.path.join(os.path.dirname(__file__), 'src')))  # Path to local lmu.py
 from lmu import LMU, LMUFFT
+
 import datasets
 import jiwer
 import os
