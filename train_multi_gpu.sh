@@ -82,14 +82,14 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --preset rtx6000-2gpu \
     --output-dir ./outputs \
     --dataset gigaspeech \
-    --subset s
+    --subset xs
 
-# For faster testing, uncomment the following to use 'xs' subset instead:
+# For larger dataset training, use 's' subset instead:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \
 #     --preset rtx6000-2gpu \
 #     --output-dir ./outputs \
 #     --dataset gigaspeech \
-#     --subset xs
+#     --subset s
 
 # Alternative: Use the torchrun-specific script
 # torchrun --nproc_per_node=2 scripts/train_torchrun.py
