@@ -240,9 +240,10 @@ class DistributedTrainer:
             
             # Update progress bar (only on main process)
             if is_main_process():
+                avg_loss_display = total_loss / num_batches if num_batches > 0 else 0.0
                 postfix = {
                     'Loss': f"{loss.item():.4f}",
-                    'Avg Loss': f"{total_loss / num_batches:.4f}",
+                    'Avg Loss': f"{avg_loss_display:.4f}",
                     'LR': f"{current_lr:.6f}"
                 }
                 if grad_norm is not None:
@@ -257,7 +258,14 @@ class DistributedTrainer:
                 )
         
         # Reduce loss across all processes
-        avg_loss = total_loss / num_batches
+        if num_batches == 0:
+            # Handle case where all batches were skipped due to NaN losses/gradients
+            if is_main_process():
+                print(f"WARNING: All batches in epoch {self.epoch + 1} were skipped due to NaN losses/gradients")
+            avg_loss = 0.0
+        else:
+            avg_loss = total_loss / num_batches
+        
         avg_loss_tensor = torch.tensor(avg_loss, device=self.device)
         avg_loss_tensor = reduce_tensor(avg_loss_tensor, self.world_size)
         
@@ -316,13 +324,21 @@ class DistributedTrainer:
                 num_batches += 1
                 
                 if is_main_process():
+                    avg_loss_display = total_loss / num_batches if num_batches > 0 else 0.0
                     progress_bar.set_postfix({
                         'Loss': f"{loss.item():.4f}",
-                        'Avg Loss': f"{total_loss / num_batches:.4f}"
+                        'Avg Loss': f"{avg_loss_display:.4f}"
                     })
         
         # Reduce loss across all processes
-        avg_loss = total_loss / num_batches
+        if num_batches == 0:
+            # Handle case where all validation batches were skipped
+            if is_main_process():
+                print(f"WARNING: All validation batches were skipped")
+            avg_loss = 0.0
+        else:
+            avg_loss = total_loss / num_batches
+        
         avg_loss_tensor = torch.tensor(avg_loss, device=self.device)
         avg_loss_tensor = reduce_tensor(avg_loss_tensor, self.world_size)
         

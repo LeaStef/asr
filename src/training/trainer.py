@@ -162,7 +162,7 @@ class Trainer:
             # Update progress bar
             progress_bar.set_postfix({
                 'Loss': f"{loss.item():.4f}",
-                'Avg Loss': f"{total_loss / num_batches:.4f}",
+                'Avg Loss': f"{total_loss / num_batches if num_batches > 0 else 0.0:.4f}",
                 'LR': f"{current_lr:.6f}"
             })
             
@@ -173,7 +173,7 @@ class Trainer:
                     learning_rate=current_lr
                 )
         
-        return total_loss / num_batches
+        return total_loss / num_batches if num_batches > 0 else 0.0
     
     def validate(self, val_loader, vocab: Dict) -> Tuple[float, float, float]:
         """
@@ -226,11 +226,11 @@ class Trainer:
                 
                 progress_bar.set_postfix({
                     'Loss': f"{loss.item():.4f}",
-                    'Avg Loss': f"{total_loss / num_batches:.4f}"
+                    'Avg Loss': f"{total_loss / num_batches if num_batches > 0 else 0.0:.4f}"
                 })
         
         # Compute metrics
-        avg_loss = total_loss / num_batches
+        avg_loss = total_loss / num_batches if num_batches > 0 else 0.0
         wer = compute_wer(all_predictions, all_targets)
         cer = compute_cer(all_predictions, all_targets)
         
