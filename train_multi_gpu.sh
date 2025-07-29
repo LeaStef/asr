@@ -58,22 +58,23 @@ mkdir -p logs
 
 # NCCL optimization for RTX 6000 GPUs (no NVLink)
 export NCCL_DEBUG=INFO
-export NCCL_TIMEOUT=3600
-export NCCL_BLOCKING_WAIT=1
-export NCCL_ASYNC_ERROR_HANDLING=1
+export NCCL_TIMEOUT=7200000
+export TORCH_NCCL_BLOCKING_WAIT=1
+export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=1
 export NCCL_TREE_THRESHOLD=0
-export NCCL_SOCKET_TIMEOUT=3600
-export NCCL_HEARTBEAT_TIMEOUT_SEC=300
+export NCCL_SOCKET_TIMEOUT=7200
+export NCCL_HEARTBEAT_TIMEOUT_SEC=600
 export OMP_NUM_THREADS=1
 export CUDA_LAUNCH_BLOCKING=0
+export TORCH_NCCL_ENABLE_TIMING=0
 
 echo "=============================="
 echo "NCCL Configuration for RTX 6000:"
 echo "  NCCL_DEBUG: $NCCL_DEBUG"
-echo "  NCCL_TIMEOUT: $NCCL_TIMEOUT"
-echo "  NCCL_BLOCKING_WAIT: $NCCL_BLOCKING_WAIT"
+echo "  NCCL_TIMEOUT: $NCCL_TIMEOUT (2 hours in ms)"
+echo "  TORCH_NCCL_BLOCKING_WAIT: $TORCH_NCCL_BLOCKING_WAIT"
 echo "  NCCL_IB_DISABLE: $NCCL_IB_DISABLE"
 echo "  NCCL_P2P_DISABLE: $NCCL_P2P_DISABLE"
 echo "  NCCL_SOCKET_TIMEOUT: $NCCL_SOCKET_TIMEOUT"
@@ -118,6 +119,15 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
 
 # Alternative: Use the torchrun-specific script
 # torchrun --nproc_per_node=2 scripts/train_torchrun.py
+
+# FALLBACK: If distributed training keeps failing due to NCCL issues:
+# python scripts/train_flexible.py \
+#     --preset rtx6000-1gpu \
+#     --output-dir ./outputs \
+#     --dataset gigaspeech \
+#     --subset m \
+#     --epochs 20 \
+#     --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
 echo "=============================="
 echo "Training completed at: $(date)"
