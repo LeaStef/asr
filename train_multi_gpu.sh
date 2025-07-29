@@ -58,18 +58,25 @@ mkdir -p logs
 
 # NCCL optimization for RTX 6000 GPUs (no NVLink)
 export NCCL_DEBUG=INFO
-export NCCL_TIMEOUT=1800
+export NCCL_TIMEOUT=3600
+export NCCL_BLOCKING_WAIT=1
+export NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=1
 export NCCL_TREE_THRESHOLD=0
+export NCCL_SOCKET_TIMEOUT=3600
+export NCCL_HEARTBEAT_TIMEOUT_SEC=300
 export OMP_NUM_THREADS=1
+export CUDA_LAUNCH_BLOCKING=0
 
 echo "=============================="
 echo "NCCL Configuration for RTX 6000:"
 echo "  NCCL_DEBUG: $NCCL_DEBUG"
 echo "  NCCL_TIMEOUT: $NCCL_TIMEOUT"
+echo "  NCCL_BLOCKING_WAIT: $NCCL_BLOCKING_WAIT"
 echo "  NCCL_IB_DISABLE: $NCCL_IB_DISABLE"
 echo "  NCCL_P2P_DISABLE: $NCCL_P2P_DISABLE"
+echo "  NCCL_SOCKET_TIMEOUT: $NCCL_SOCKET_TIMEOUT"
 echo "=============================="
 echo "Starting distributed training..."
 echo "=============================="

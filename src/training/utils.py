@@ -200,7 +200,7 @@ def load_checkpoint(checkpoint_path: str, model: nn.Module,
     Returns:
         checkpoint: Checkpoint dictionary
     """
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
     # Load model state
     model.load_state_dict(checkpoint['model_state_dict'])
