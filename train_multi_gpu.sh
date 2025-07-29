@@ -90,7 +90,8 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --output-dir ./outputs \
     --dataset gigaspeech \
     --subset m \
-    --epochs 20
+    --epochs 20 \
+    --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
 # For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \
