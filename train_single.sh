@@ -3,7 +3,7 @@
 #SBATCH --job-name=lmu-asr-single-gpu
 # Set resource requirements: Queues are limited to seven day allocations  
 # Time format: HH:MM:SS
-#SBATCH --time=150:00:00
+#SBATCH --time=200:00:00
 #SBATCH --mem=64GB
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
@@ -63,17 +63,19 @@ echo "=============================="
 # RTX 6000 Single GPU training with optimizations
 echo "Training configuration:"
 echo "  GPU: RTX 6000 Ada Generation (48GB)"
-echo "  Dataset: GigaSpeech subset 'xs' (fast testing) or 's' (small)"
+echo "  Dataset: GigaSpeech subset 'm' (~1000 hours, resuming from epoch 8)"
 echo "  Preset: rtx6000-1gpu (64 batch size, 2e-3 LR, 12 workers)"
 echo "  Optimizations: 500 token sequences, 16 data workers"
-echo "  Estimated time: ~2-4 hours per epoch"
+echo "  Estimated time: ~6-8 hours per epoch (single GPU vs distributed)"
 echo "  Checkpoints saved every epoch to ./outputs/checkpoints/"
 
 python scripts/train_flexible.py \
     --preset rtx6000-1gpu \
     --output-dir ./outputs \
     --dataset gigaspeech \
-    --subset xs
+    --subset m \
+    --epochs 20 \
+    --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
 # For larger dataset training, use 's' or 'm' subset instead:
 # python scripts/train_flexible.py \
