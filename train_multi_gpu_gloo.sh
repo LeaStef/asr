@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=lmu-asr-multi-gpu-gloo
 # Set resource requirements
-#SBATCH --time=200:00:00
+#SBATCH --time=168:00:00
 #SBATCH --mem=128GB
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:2

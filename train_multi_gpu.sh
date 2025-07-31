@@ -3,7 +3,7 @@
 #SBATCH --job-name=lmu-asr-multi-gpu
 # Set resource requirements: Queues are limited to seven day allocations
 # Time format: HH:MM:SS
-#SBATCH --time=150:00:00
+#SBATCH --time=168:00:00
 #SBATCH --mem=128GB
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:2
