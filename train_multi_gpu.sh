@@ -56,19 +56,27 @@ echo "Project directory: $(pwd)"
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-# NCCL optimization for RTX 6000 GPUs (no NVLink)
+# NCCL optimization for RTX 6000 GPUs (no NVLink) - AGGRESSIVE FIX
 export NCCL_DEBUG=INFO
-export NCCL_TIMEOUT=7200000
+export NCCL_TIMEOUT=10800000  # 3 hours
 export TORCH_NCCL_BLOCKING_WAIT=1
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=1
 export NCCL_TREE_THRESHOLD=0
-export NCCL_SOCKET_TIMEOUT=7200
-export NCCL_HEARTBEAT_TIMEOUT_SEC=600
+export NCCL_SOCKET_TIMEOUT=10800
+export NCCL_HEARTBEAT_TIMEOUT_SEC=900
 export OMP_NUM_THREADS=1
 export CUDA_LAUNCH_BLOCKING=0
 export TORCH_NCCL_ENABLE_TIMING=0
+
+# Force TCP-only communication (most reliable for RTX 6000)
+export NCCL_SOCKET_FAMILY=AF_INET
+export NCCL_SOCKET_IFNAME=lo  # Use loopback for localhost communication
+export NCCL_BUFFSIZE=8388608   # 8MB buffers
+export NCCL_NTHREADS=16        # More communication threads
+export NCCL_LL_THRESHOLD=0     # Disable low-latency algorithms
+export NCCL_ALGO=Ring          # Force ring algorithm (most stable)
 
 echo "=============================="
 echo "NCCL Configuration for RTX 6000:"
