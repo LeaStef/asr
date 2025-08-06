@@ -55,7 +55,7 @@ mkdir -p logs
 echo "Starting DataParallel training (no NCCL)..."
 
 # Single-process multi-GPU training (NO DISTRIBUTED)
-python scripts/train_flexible.py \
+python scripts/train_dataparallel.py \
     --preset rtx6000-2gpu \
     --output-dir ./outputs \
     --dataset gigaspeech \

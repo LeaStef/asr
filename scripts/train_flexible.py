@@ -46,8 +46,10 @@ def setup_distributed():
         world_size = int(os.environ['WORLD_SIZE'])
         local_rank = int(os.environ['LOCAL_RANK'])
         
-        # Initialize process group
-        dist.init_process_group(backend='nccl')
+        # Initialize process group with configurable backend
+        backend = os.environ.get('TORCH_DISTRIBUTED_BACKEND', 'nccl')
+        print(f"Initializing distributed training with backend: {backend}")
+        dist.init_process_group(backend=backend)
         torch.cuda.set_device(local_rank)
         
         return rank, world_size, local_rank
