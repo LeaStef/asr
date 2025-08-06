@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=lmu-asr-multi-gpu-gloo
-# Set resource requirements
+#SBATCH --job-name=lmu-asr-gloo-optimized
 #SBATCH --time=168:00:00
 #SBATCH --mem=128GB
 #SBATCH --cpus-per-task=16
@@ -16,11 +15,8 @@
 #SBATCH -o JOB%j.out
 #SBATCH -e JOB%j-err.out
 
-echo "==== SLURM Multi-GPU Job Information (GLOO Backend) ===="
+echo "==== Optimized Gloo Backend Training (No NCCL) ===="
 echo "Job ID: $SLURM_JOB_ID"
-echo "Job Name: $SLURM_JOB_NAME"
-echo "Node: $SLURM_NODELIST"
-echo "GPUs: $CUDA_VISIBLE_DEVICES"
 echo "Start Time: $(date)"
 echo "=============================="
 
@@ -29,41 +25,44 @@ log_dir=$HOME/asr
 mkdir -p $log_dir
 cd $log_dir
 
-echo "Working directory: $(pwd)"
-echo "Activating virtual environment..."
-
 # Load virtual environment
 if [ -f "$log_dir/venv/bin/activate" ]; then
     source $log_dir/venv/bin/activate
 elif [ -f "$log_dir/bin/activate" ]; then
     source $log_dir/bin/activate
-else
-    echo "Warning: Virtual environment not found. Please check the path."
 fi
 
-echo "Virtual environment activated: $VIRTUAL_ENV"
 echo "Python version: $(python --version)"
 echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
-echo "CUDA available: $(python -c 'import torch; print(torch.cuda.is_available())')"
 echo "GPU count: $(python -c 'import torch; print(torch.cuda.device_count())')"
+
+# Gloo backend optimizations (NO NCCL!)
+export TORCH_DISTRIBUTED_BACKEND=gloo
+export GLOO_SOCKET_IFNAME=lo  # Use loopback interface
+export GLOO_DEVICE_TRANSPORT=TCP  # Force TCP transport
+export OMP_NUM_THREADS=8  # Optimize CPU threading for Gloo
+export MKL_NUM_THREADS=8
+
+# Memory and process optimizations
+export CUDA_LAUNCH_BLOCKING=0
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+
+echo "=============================="
+echo "Gloo Backend Configuration (NCCL-FREE):"
+echo "  Backend: Gloo (CPU-based communication)"
+echo "  Transport: TCP over loopback interface"
+echo "  CPU Threads: $OMP_NUM_THREADS (optimized for Gloo)"
+echo "  GPUs: 2x RTX 6000 Ada Generation"
+echo "  Memory: Optimized allocation"
+echo "  ZERO NCCL dependencies!"
+echo "=============================="
 
 # Create logs directory
 mkdir -p logs
 
-# Use Gloo backend instead of NCCL (more stable for RTX 6000)
-export TORCH_DISTRIBUTED_BACKEND=gloo
-export OMP_NUM_THREADS=8
+echo "Starting NCCL-free distributed training..."
 
-echo "=============================="
-echo "Distributed Configuration (GLOO Backend):"
-echo "  Backend: GLOO (CPU-based, more stable)"
-echo "  GPUs: 2x RTX 6000 Ada Generation"
-echo "  No NCCL communication issues!"
-echo "=============================="
-echo "Starting distributed training with GLOO backend..."
-echo "=============================="
-
-# Multi-GPU training with Gloo backend
+# Multi-GPU training with Gloo (NO NCCL)
 torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --preset rtx6000-2gpu \
     --output-dir ./outputs \
