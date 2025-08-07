@@ -10,12 +10,11 @@ import argparse
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from config.config import create_config_from_dict
+from config.config import ModelConfig, DataConfig, TrainingConfig, Config
 from models.asr_model import create_model
 from data.dataset import create_dataloaders
 from training.trainer import Trainer
 from training.utils import load_checkpoint
-from omegaconf import OmegaConf
 
 
 def main():
@@ -37,56 +36,56 @@ def main():
     print(f"Resume from: {args.resume}")
     print("=" * 50)
     
-    # Create config - using single GPU config but will use DataParallel
-    config_dict = {
-        'model': {
-            'encoder': {
-                'input_size': 80,
-                'hidden_size': 512,
-                'memory_size': 256,
-                'num_lmu_layers': 4,
-                'theta': 1000,
-                'dropout': 0.1,
-                'use_fft_lmu': False,
-                'use_attention': True,
-                'num_attention_heads': 8,
-                'use_downsampling': False,
-                'downsample_factor': 2
-            },
-            'decoder': {
-                'vocab_size': 32
-            }
-        },
-        'data': {
-            'dataset': args.dataset,
-            'subset': args.subset,
-            'save_dir': "./data/gigaspeech",
-            'sample_rate': 16000,
-            'n_mels': 80,
-            'max_seq_len': 500,
-            'augment': True,
-            'num_workers': 8  # Reduced for single process
-        },
-        'training': {
-            'batch_size': 32,  # Per GPU batch size (will be effective 64 with 2 GPUs)
-            'lr': 2e-3,  # Slightly higher LR for larger effective batch
-            'max_epochs': args.epochs,
-            'patience': 10,
-            'mixed_precision': True,
-            'gradient_clip_norm': 1.0,
-            'accumulate_grad_batches': 1,
-            'warmup_steps': 1000,
-            'weight_decay': 0.01,
-            'log_interval': 50
-        }
-    }
+    # Create config directly using dataclasses
+    model_config = ModelConfig(
+        input_size=80,
+        hidden_size=512,
+        memory_size=256,
+        num_lmu_layers=4,
+        theta=1000,
+        dropout=0.1,
+        use_fft_lmu=False,
+        use_attention=True,
+        num_attention_heads=8,
+        use_downsampling=False,
+        downsample_factor=2,
+        vocab_size=32  # Will be updated after loading data
+    )
     
-    config = create_config_from_dict(OmegaConf.create(config_dict))
+    data_config = DataConfig(
+        dataset=args.dataset,
+        subset=args.subset,
+        save_dir="./data/gigaspeech",
+        sample_rate=16000,
+        n_mels=80,
+        max_seq_len=500,
+        augment=True,
+        num_workers=8  # Reduced for single process
+    )
+    
+    training_config = TrainingConfig(
+        batch_size=32,  # Per GPU batch size (will be effective 64 with 2 GPUs)
+        lr=2e-3,  # Slightly higher LR for larger effective batch
+        max_epochs=args.epochs,
+        patience=10,
+        mixed_precision=True,
+        gradient_clip_norm=1.0,
+        accumulate_grad_batches=1,
+        warmup_steps=1000,
+        weight_decay=0.01,
+        log_interval=50
+    )
+    
+    config = Config(
+        model=model_config,
+        data=data_config,
+        training=training_config
+    )
     
     # Create data loaders
     print("Creating data loaders...")
     train_loader, val_loader, vocab = create_dataloaders(config)
-    config.model.decoder.vocab_size = vocab['vocab_size']
+    config.model.vocab_size = vocab['vocab_size']
     
     # Create model
     print("Creating model...")
