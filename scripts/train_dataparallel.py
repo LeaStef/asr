@@ -109,7 +109,9 @@ def main():
     # Resume if checkpoint provided
     if args.resume:
         print(f"Resuming from: {args.resume}")
-        checkpoint = load_checkpoint(args.resume, model, trainer.optimizer)
+        # Load checkpoint into the underlying model (before DataParallel wrapping)
+        underlying_model = model.module if hasattr(model, 'module') else model
+        checkpoint = load_checkpoint(args.resume, underlying_model, trainer.optimizer)
         trainer.epoch = checkpoint.get('epoch', 0)
         print(f"Resuming from epoch {trainer.epoch}")
     
