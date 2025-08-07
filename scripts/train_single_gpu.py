@@ -20,12 +20,12 @@ def main():
     parser = argparse.ArgumentParser(description="Single GPU ASR Training (Debug NaN issues)")
     parser.add_argument("--output-dir", default="./outputs", help="Output directory")
     parser.add_argument("--dataset", default="gigaspeech", help="Dataset")
-    parser.add_argument("--subset", default="m", help="Dataset subset")
-    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
+    parser.add_argument("--subset", default="xs", help="Dataset subset (ultra small for testing)")
+    parser.add_argument("--epochs", type=int, default=5, help="Number of epochs (quick test)")
     parser.add_argument("--resume", help="Resume from checkpoint")
-    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (reduced from 2e-3)")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size (reduced from 32)")
-    parser.add_argument("--disable-mixed-precision", action="store_true", help="Disable mixed precision")
+    parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate (ultra conservative)")
+    parser.add_argument("--batch-size", type=int, default=8, help="Batch size (ultra small)")
+    parser.add_argument("--disable-mixed-precision", action="store_true", default=True, help="Disable mixed precision by default")
     
     args = parser.parse_args()
     

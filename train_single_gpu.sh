@@ -40,25 +40,25 @@ echo "GPU count: $(python -c 'import torch; print(torch.cuda.device_count())')"
 mkdir -p logs
 
 echo "=============================="
-echo "Single GPU Debug Configuration:"
-echo "  Method: Standard PyTorch single GPU"
-echo "  Batch size: 16 (reduced from 32)"
-echo "  Learning rate: 1e-3 (reduced from 2e-3)"
-echo "  Mixed precision: Enabled (can disable with --disable-mixed-precision)"
-echo "  Focus: Debug NaN losses from DataParallel"
+echo "Ultra-Conservative Fresh Training:"
+echo "  Method: Fresh training from scratch (no checkpoints)"
+echo "  Batch size: 8 (ultra small)"
+echo "  Learning rate: 5e-4 (ultra conservative)"
+echo "  Mixed precision: DISABLED by default"
+echo "  Dataset: GigaSpeech XS (smallest subset)"
+echo "  Epochs: 5 (quick validation)"
 echo "=============================="
 
 echo "Starting single GPU training..."
 
-# Conservative single GPU training
+# Ultra-conservative fresh training from scratch (no resume)
 python scripts/train_single_gpu.py \
-    --output-dir ./outputs \
+    --output-dir ./outputs_scratch \
     --dataset gigaspeech \
-    --subset m \
-    --epochs 20 \
-    --batch-size 16 \
-    --lr 1e-3 \
-    --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
+    --subset xs \
+    --epochs 5 \
+    --batch-size 8 \
+    --lr 5e-4
 
 echo "=============================="
 echo "Training completed at: $(date)"
