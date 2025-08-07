@@ -99,10 +99,12 @@ def main():
         effective_batch_size = config.training.batch_size * torch.cuda.device_count()
         print(f"Effective batch size: {effective_batch_size}")
     
-    model = model.cuda()
+    # Move model to GPU
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
     
     # Create trainer
-    trainer = Trainer(model, config.training, config.data, log_dir=args.output_dir)
+    trainer = Trainer(model, config.training, config.data, device, log_dir=args.output_dir)
     
     # Resume if checkpoint provided
     if args.resume:
