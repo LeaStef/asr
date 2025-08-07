@@ -123,7 +123,9 @@ class Trainer:
             if self.scaler is not None:
                 with autocast():
                     log_probs, _ = self.model(spectrograms, input_lengths)
-                    loss = self.model.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                    # Get underlying model for loss computation (handle DataParallel)
+                    underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                    loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
                 
                 # Backward pass
                 self.scaler.scale(loss).backward()
@@ -139,7 +141,9 @@ class Trainer:
             else:
                 # Regular forward pass
                 log_probs, _ = self.model(spectrograms, input_lengths)
-                loss = self.model.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                # Get underlying model for loss computation (handle DataParallel)
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
                 
                 # Backward pass
                 loss.backward()
@@ -209,10 +213,12 @@ class Trainer:
                 
                 # Forward pass
                 log_probs, _ = self.model(spectrograms, input_lengths)
-                loss = self.model.compute_loss(log_probs, targets, input_lengths, target_lengths)
+                # Get underlying model for loss and decode (handle DataParallel)
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                loss = underlying_model.compute_loss(log_probs, targets, input_lengths, target_lengths)
                 
                 # Decode predictions
-                predictions = self.model.decode(log_probs, input_lengths)
+                predictions = underlying_model.decode(log_probs, input_lengths)
                 
                 # Convert to text
                 pred_texts = decode_predictions(predictions, vocab)
@@ -328,7 +334,9 @@ class Trainer:
                 log_probs, _ = self.model(spectrograms, input_lengths)
                 
                 # Decode predictions
-                predictions = self.model.decode(log_probs, input_lengths)
+                # Get underlying model for decode (handle DataParallel)
+                underlying_model = self.model.module if hasattr(self.model, 'module') else self.model
+                predictions = underlying_model.decode(log_probs, input_lengths)
                 
                 # Convert to text
                 pred_texts = decode_predictions(predictions, vocab)
