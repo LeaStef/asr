@@ -17,21 +17,12 @@
 #SBATCH -o JOB%j.out
 #SBATCH -e JOB%j-err.out
 
-echo "==== SLURM Multi-GPU Job Information ===="
-echo "Job ID: $SLURM_JOB_ID"
-echo "Job Name: $SLURM_JOB_NAME"
-echo "Node: $SLURM_NODELIST"
-echo "GPUs: $CUDA_VISIBLE_DEVICES"
-echo "Start Time: $(date)"
-echo "=============================="
 
 # Set up environment
 log_dir=$HOME/asr
 mkdir -p $log_dir
 cd $log_dir
 
-echo "Working directory: $(pwd)"
-echo "Activating virtual environment..."
 
 # Load up your virtual environment  
 # Set up environment on watgpu.cs or in interactive session (use `source` keyword)
@@ -40,66 +31,19 @@ if [ -f "$log_dir/venv/bin/activate" ]; then
     source $log_dir/venv/bin/activate
 elif [ -f "$log_dir/bin/activate" ]; then
     source $log_dir/bin/activate
-else
-    echo "Warning: Virtual environment not found. Please check the path."
 fi
 
-echo "Virtual environment activated: $VIRTUAL_ENV"
-echo "Python version: $(python --version)"
-echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
-echo "CUDA available: $(python -c 'import torch; print(torch.cuda.is_available())')"
-echo "GPU count: $(python -c 'import torch; print(torch.cuda.device_count())')"
 
 # Already in project directory ($HOME/asr)
-echo "Project directory: $(pwd)"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-# NCCL optimization for RTX 6000 GPUs (no NVLink) - AGGRESSIVE FIX
-export NCCL_DEBUG=INFO
-export NCCL_TIMEOUT=10800000  # 3 hours
-export TORCH_NCCL_BLOCKING_WAIT=1
-export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
-export NCCL_IB_DISABLE=1
-export NCCL_P2P_DISABLE=1
-export NCCL_TREE_THRESHOLD=0
-export NCCL_SOCKET_TIMEOUT=10800
-export NCCL_HEARTBEAT_TIMEOUT_SEC=900
-export OMP_NUM_THREADS=1
-export CUDA_LAUNCH_BLOCKING=0
-export TORCH_NCCL_ENABLE_TIMING=0
 
-# Force TCP-only communication (most reliable for RTX 6000)
-export NCCL_SOCKET_FAMILY=AF_INET
-export NCCL_SOCKET_IFNAME=lo  # Use loopback for localhost communication
-export NCCL_BUFFSIZE=8388608   # 8MB buffers
-export NCCL_NTHREADS=16        # More communication threads
-export NCCL_LL_THRESHOLD=0     # Disable low-latency algorithms
-export NCCL_ALGO=Ring          # Force ring algorithm (most stable)
 
-echo "=============================="
-echo "NCCL Configuration for RTX 6000:"
-echo "  NCCL_DEBUG: $NCCL_DEBUG"
-echo "  NCCL_TIMEOUT: $NCCL_TIMEOUT (2 hours in ms)"
-echo "  TORCH_NCCL_BLOCKING_WAIT: $TORCH_NCCL_BLOCKING_WAIT"
-echo "  NCCL_IB_DISABLE: $NCCL_IB_DISABLE"
-echo "  NCCL_P2P_DISABLE: $NCCL_P2P_DISABLE"
-echo "  NCCL_SOCKET_TIMEOUT: $NCCL_SOCKET_TIMEOUT"
-echo "=============================="
-echo "Starting distributed training..."
-echo "=============================="
 
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
-echo "Training configuration:"
-echo "  GPUs: 2x RTX 6000 Ada Generation"
-echo "  Dataset: GigaSpeech subset 'm' (~1000 hours)"
-echo "  Preset: rtx6000-2gpu (80 batch size, 3e-3 LR, 16 workers)"
-echo "  Epochs: 20 (optimal for 'm' subset)"
-echo "  Optimizations: 500 token sequences, distributed training"
-echo "  Estimated time: ~5-7 days (3-4 hours per epoch)"
-echo "  Checkpoints saved every epoch to ./outputs/checkpoints/"
 
 torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --preset rtx6000-2gpu \
@@ -107,7 +51,6 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --dataset gigaspeech \
     --subset m \
     --epochs 20 \
-    --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
 # For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \
@@ -137,6 +80,3 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
 #     --epochs 20 \
 #     --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
-echo "=============================="
-echo "Training completed at: $(date)"
-echo "=============================="
