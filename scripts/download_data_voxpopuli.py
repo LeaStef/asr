@@ -10,8 +10,8 @@ from tqdm import tqdm
 
 import torch
 
-def download(subset: str = "clean-360", save_dir: str = '/home/ctnuser/pytorch-lmu-asr/data/LibriSpeech'):
-    """Download LibriSpeech dataset and create manifest files"""
+def download(subset: str = "en_accented", save_dir: str = '/home/ctnuser/pytorch-lmu-asr/data/VoxPopuli'):
+    """Download VoxPopuli dataset and create manifest files"""
     
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)

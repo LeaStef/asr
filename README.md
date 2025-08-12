@@ -5,7 +5,7 @@ A PyTorch-based Automatic Speech Recognition (ASR) system using Legendre Memory 
 ## Features
 
 - **LMU-based encoder** with multi-head self-attention for enhanced temporal modeling
-- **Multiple dataset support** (LibriSpeech, GigaSpeech)
+- **GigaSpeech dataset support** with flexible subset selection
 - **Distributed training** with DDP and torchrun support
 - **Mixed precision training** for memory efficiency
 - **Flexible configuration** system with Hydra and argparse
@@ -62,7 +62,7 @@ python scripts/train_flexible.py --batch-size 64 --preset l40s-1gpu
    - Loss computation and metrics
 
 3. **Data Pipeline** (`src/data/`)
-   - LibriSpeech and GigaSpeech dataset loaders
+   - GigaSpeech dataset loaders
    - Mel-spectrogram feature extraction
    - SpecAugment data augmentation
 
@@ -111,11 +111,6 @@ python scripts/train_flexible.py \
 
 ## Datasets
 
-### LibriSpeech (Default)
-- Automatically downloaded via HuggingFace datasets
-- Clean-100 subset for training
-- Character-level tokenization
-
 ### GigaSpeech
 - Requires manual download and preprocessing
 - Supports multiple subsets (xs, s, m, l, xl)
@@ -155,7 +150,7 @@ Files saved as:
 
 ## Performance Targets
 
-- **Single GPU**: <15% WER on LibriSpeech clean test
+- **Single GPU**: Competitive WER on GigaSpeech test sets
 - **Multi-GPU**: Linear speedup up to 4-8 GPUs
 - **GigaSpeech**: Competitive results on various subsets
 
@@ -203,7 +198,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - **Legendre Memory Units**: Based on the neural memory architecture from Nengo
-- **LibriSpeech**: Open speech corpus for ASR research
 - **GigaSpeech**: Large-scale speech recognition corpus
 - **PyTorch**: Deep learning framework
 

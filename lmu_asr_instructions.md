@@ -1,7 +1,7 @@
 # PyTorch LMU-based ASR System Setup Instructions
 
 ## Project Overview
-Create a basic Automatic Speech Recognition (ASR) system using Legendre Memory Units (LMUs) with PyTorch. The system should be trainable on Linux with single or multi-GPU support using the LibriSpeech clean-100 dataset, leveraging the pytorch-lmu implementation.
+Create a basic Automatic Speech Recognition (ASR) system using Legendre Memory Units (LMUs) with PyTorch. The system should be trainable on Linux with single or multi-GPU support using the GigaSpeech dataset, leveraging the pytorch-lmu implementation.
 
 ## Project Structure
 Create the following directory structure:
@@ -183,8 +183,8 @@ class LMUASRModel(nn.Module):
 ```
 
 ### 4. Data Pipeline (src/data/)
-Implement distributed-aware data loading for LibriSpeech:
-- Download LibriSpeech clean-100 subset
+Implement distributed-aware data loading for GigaSpeech:
+- Download GigaSpeech subset
 - Convert audio to mel spectrograms using librosa/torchaudio
 - Character-level tokenization
 - Efficient batching with padding and masking
@@ -289,8 +289,8 @@ model:
     vocab_size: 29  # 26 letters + space + apostrophe + blank
   
 data:
-  dataset: "librispeech"
-  subset: "clean-100"
+  dataset: "gigaspeech"
+  subset: "xs"
   sample_rate: 16000
   n_mels: 80
   max_seq_len: 1000
@@ -449,7 +449,7 @@ Include these optimizations for efficient training:
 ## Scripts to Create
 
 ### scripts/download_data.py
-Download LibriSpeech clean-100 and prepare data manifests with proper distributed access.
+Download GigaSpeech and prepare data manifests with proper distributed access.
 
 ### scripts/train.py
 Single GPU training script using Hydra for configuration management.
@@ -492,14 +492,14 @@ Evaluation script that loads trained model and computes WER on test set with dis
    - Include optimizer and scheduler states
 
 ## Expected Performance
-Target WER on LibriSpeech clean test:
+Target WER on GigaSpeech test:
 - Single GPU goal: <15% WER
 - Multi-GPU goal: Same accuracy with faster training
 - Scaling: Linear speedup up to 4-8 GPUs
 
 ## Implementation Priority
 1. Basic LMU encoder + CTC model (single GPU)
-2. Data pipeline for LibriSpeech
+2. Data pipeline for GigaSpeech
 3. Training loop with CTC loss
 4. Multi-GPU support with DistributedDataParallel
 5. Evaluation with WER calculation

@@ -312,7 +312,7 @@ print(f"Recommended device for training: {device}")
 print(f"GPUs available: {torch.cuda.device_count()}")
 print("\nNext steps:")
 print("1. Test multi-GPU setup if available")
-print("2. Download LibriSpeech dataset")
+print("2. Download GigaSpeech dataset")
 print("3. Implement distributed training configuration")
 ```
 

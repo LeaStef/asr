@@ -150,7 +150,7 @@ def parse_args():
     # Configuration
     parser.add_argument('--config', '-c', default='base_config',
                         help='Base configuration file name (default: base_config)')
-    parser.add_argument('--dataset', choices=['gigaspeech', 'librispeech'], default=None,
+    parser.add_argument('--dataset', choices=['gigaspeech'], default=None,
                         help='Dataset to use')
     parser.add_argument('--subset', default=None,
                         help='Dataset subset (e.g., xs, s, m for GigaSpeech)')

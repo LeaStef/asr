@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a PyTorch-based Automatic Speech Recognition (ASR) system using Legendre Memory Units (LMUs). The system is designed for distributed training on Linux with LibriSpeech dataset, supporting both single and multi-GPU configurations.
+This is a PyTorch-based Automatic Speech Recognition (ASR) system using Legendre Memory Units (LMUs). The system is designed for distributed training on Linux with GigaSpeech dataset, supporting both single and multi-GPU configurations.
 
 ## Essential Commands
 
@@ -32,8 +32,8 @@ pip install -r requirements.txt
 # Test environment setup
 python pytorch-test-setup.py
 
-# Download LibriSpeech dataset (optional - HuggingFace datasets used by default)
-python scripts/download_data.py --subset clean-100 --save_dir ./data
+# Download GigaSpeech dataset (optional - HuggingFace datasets used by default)
+python scripts/download_gigaspeech.py --subset xs --save_dir ./data
 
 # Run the demo notebook for complete walkthrough
 jupyter notebook notebooks/lmu_asr_demo.ipynb
@@ -66,7 +66,7 @@ All training configurations use Hydra with YAML files in `configs/`:
 ### Core Components
 1. **LMU Encoder** (`src/models/lmu_encoder.py`) - Stack of LMU layers with multi-head self-attention for enhanced temporal modeling
 2. **ASR Model** (`src/models/asr_model.py`) - Complete ASR system with CTC decoder, beam search, and loss computation
-3. **Data Pipeline** (`src/data/`) - LibriSpeech dataset processing, mel-spectrogram conversion, and SpecAugment
+3. **Data Pipeline** (`src/data/`) - GigaSpeech dataset processing, mel-spectrogram conversion, and SpecAugment
 4. **Training Logic** (`src/training/`) - Single GPU and distributed training with mixed precision and early stopping
 5. **Demo Notebook** (`notebooks/lmu_asr_demo.ipynb`) - Complete end-to-end workflow demonstration with attention analysis
 
@@ -83,7 +83,7 @@ All training configurations use Hydra with YAML files in `configs/`:
 - **Training**: Mixed precision, gradient clipping, distributed data parallel
 
 ## Data Pipeline
-- **Dataset**: LibriSpeech clean-100 subset via HuggingFace datasets
+- **Dataset**: GigaSpeech subset via HuggingFace datasets
 - **Preprocessing**: Audio → mel-spectrogram → character tokenization
 - **Augmentation**: SpecAugment-style data augmentation
 - **Distributed**: DistributedSampler for multi-GPU training
@@ -111,7 +111,7 @@ The repository contains a complete, fully functional LMU-based ASR system:
 - **Checkpointing**: Save only from rank 0 process in distributed training
 
 ## Expected Performance Targets
-- **Single GPU**: <15% WER on LibriSpeech clean test
+- **Single GPU**: Competitive WER on GigaSpeech test sets
 - **Multi-GPU**: Same accuracy with linear speedup up to 4-8 GPUs
 - **Scaling**: Efficient scaling for production workloads
 - **Demo Model**: Reduced configuration for fast experimentation and learning
