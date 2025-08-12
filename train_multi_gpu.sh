@@ -1,8 +1,6 @@
 #!/bin/bash
 
 #SBATCH --job-name=lmu-asr-multi-gpu
-# Set resource requirements: Queues are limited to seven day allocations
-# Time format: HH:MM:SS
 #SBATCH --time=168:00:00
 #SBATCH --mem=128GB
 #SBATCH --cpus-per-task=16
@@ -39,8 +37,10 @@ fi
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-
-
+# Minimal NCCL optimization for RTX 6000 GPUs (no NVLink)
+export NCCL_IB_DISABLE=1
+export NCCL_P2P_DISABLE=1
+export NCCL_SOCKET_IFNAME=lo
 
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
