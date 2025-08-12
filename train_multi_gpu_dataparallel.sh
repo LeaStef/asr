@@ -15,10 +15,6 @@
 #SBATCH -o JOB%j.out
 #SBATCH -e JOB%j-err.out
 
-echo "==== DataParallel Training (No Distributed, No NCCL) ===="
-echo "Job ID: $SLURM_JOB_ID"
-echo "Start Time: $(date)"
-echo "=============================="
 
 # Set up environment
 log_dir=$HOME/asr
@@ -32,27 +28,15 @@ elif [ -f "$log_dir/bin/activate" ]; then
     source $log_dir/bin/activate
 fi
 
-echo "Python version: $(python --version)"
-echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')"
-echo "GPU count: $(python -c 'import torch; print(torch.cuda.device_count())')"
 
 # No distributed settings needed - DataParallel handles it
 export CUDA_LAUNCH_BLOCKING=0
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 
-echo "=============================="
-echo "DataParallel Configuration (NCCL-FREE):"
-echo "  Method: torch.nn.DataParallel"
-echo "  Communication: Direct GPU-to-GPU (no NCCL/Gloo)"
-echo "  GPUs: 2x RTX 6000 Ada Generation"
-echo "  Process: Single process, multi-GPU"
-echo "  ZERO distributed complexity!"
-echo "=============================="
 
 # Create logs directory
 mkdir -p logs
 
-echo "Starting DataParallel training (no NCCL)..."
 
 # Single-process multi-GPU training (NO DISTRIBUTED)
 python scripts/train_dataparallel.py \
@@ -63,6 +47,3 @@ python scripts/train_dataparallel.py \
     --epochs 20 \
     --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
 
-echo "=============================="
-echo "Training completed at: $(date)"
-echo "=============================="

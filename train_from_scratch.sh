@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=lmu-asr-single-gpu-debug
+#SBATCH --job-name=lmu-asr-from-scratch
 #SBATCH --time=168:00:00
-#SBATCH --mem=64GB
-#SBATCH --cpus-per-task=8
+#SBATCH --mem=32GB
+#SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
 #SBATCH --partition=CELIASMI
 
@@ -29,16 +29,20 @@ elif [ -f "$log_dir/bin/activate" ]; then
 fi
 
 
-# Create logs directory
-mkdir -p logs
+# Create fresh logs directory
+rm -rf logs_scratch
+mkdir -p logs_scratch
+rm -rf outputs_scratch
+mkdir -p outputs_scratch
 
 
-# Ultra-conservative fresh training from scratch (no resume)
+# Ultra-conservative fresh training
 python scripts/train_single_gpu.py \
     --output-dir ./outputs_scratch \
     --dataset gigaspeech \
     --subset xs \
     --epochs 5 \
     --batch-size 8 \
-    --lr 5e-4
+    --lr 5e-4 \
+    --disable-mixed-precision
 

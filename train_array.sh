@@ -18,27 +18,12 @@
 #SBATCH --output=logs/slurm-%A_%a.out
 #SBATCH --error=logs/slurm-%A_%a.err
 
-echo "==== SLURM Array Job Information ===="
-echo "Job ID: $SLURM_JOB_ID"
-echo "Array Job ID: $SLURM_ARRAY_JOB_ID"
-echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Job Name: $SLURM_JOB_NAME"
-echo "Node: $SLURM_NODELIST"
-echo "GPU: $CUDA_VISIBLE_DEVICES"
-echo "Start Time: $(date)"
-echo "=============================="
-
 # Set up environment
 log_dir=$HOME/asr
 cd $log_dir
 
-echo "Working directory: $(pwd)"
-echo "Activating virtual environment..."
-
 # Activate pip virtual environment
 source asr/bin/activate
-
-echo "Virtual environment activated: $VIRTUAL_ENV"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs
@@ -62,20 +47,9 @@ batch_size=${batch_sizes[$batch_idx]}
 learning_rate=${learning_rates[$lr_idx]}
 preset=${presets[$preset_idx]}
 
-echo "=============================="
-echo "Hyperparameters for this job:"
-echo "Batch size: $batch_size"
-echo "Learning rate: $learning_rate"
-echo "Preset: $preset"
-echo "Seed: $SLURM_ARRAY_TASK_ID"
-echo "=============================="
-
 # Create unique output directory for this job
 output_dir="outputs/job_${SLURM_ARRAY_JOB_ID}_task_${SLURM_ARRAY_TASK_ID}"
 mkdir -p $output_dir
-
-echo "Starting training..."
-echo "Output directory: $output_dir"
 
 # Run training with parameters specific to this array task
 python scripts/train_flexible.py \
@@ -89,15 +63,12 @@ python scripts/train_flexible.py \
     --subset xs
 
 # Save job info to output directory
-echo "Job completed successfully" > $output_dir/job_info.txt
-echo "SLURM_JOB_ID: $SLURM_JOB_ID" >> $output_dir/job_info.txt
-echo "SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID" >> $output_dir/job_info.txt
-echo "Batch size: $batch_size" >> $output_dir/job_info.txt
-echo "Learning rate: $learning_rate" >> $output_dir/job_info.txt
-echo "Preset: $preset" >> $output_dir/job_info.txt
-echo "Completion time: $(date)" >> $output_dir/job_info.txt
-
-echo "=============================="
-echo "Training completed at: $(date)"
-echo "Results saved to: $output_dir"
-echo "=============================="
+cat > $output_dir/job_info.txt << EOF
+Job completed successfully
+SLURM_JOB_ID: $SLURM_JOB_ID
+SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID
+Batch size: $batch_size
+Learning rate: $learning_rate
+Preset: $preset
+Completion time: $(date)
+EOF
