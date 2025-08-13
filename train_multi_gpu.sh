@@ -37,10 +37,9 @@ fi
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-# Minimal NCCL optimization for RTX 6000 GPUs (no NVLink)
-export NCCL_IB_DISABLE=1
-export NCCL_P2P_DISABLE=1
-export NCCL_SOCKET_IFNAME=lo
+# Use Gloo backend instead of NCCL (more stable for RTX 6000)
+export TORCH_DISTRIBUTED_BACKEND=gloo
+export OMP_NUM_THREADS=8
 
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
