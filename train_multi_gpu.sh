@@ -37,9 +37,16 @@ fi
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
-# Use Gloo backend instead of NCCL (more stable for RTX 6000)
-export TORCH_DISTRIBUTED_BACKEND=gloo
-export OMP_NUM_THREADS=8
+# NCCL configuration with full debugging for RTX 6000
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=ALL
+export TORCH_DISTRIBUTED_DEBUG=INFO
+export NCCL_IB_DISABLE=1
+export NCCL_P2P_DISABLE=1
+export NCCL_SOCKET_IFNAME=lo
+
+# Check GPU topology
+nvidia-smi topo -m
 
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
