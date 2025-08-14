@@ -33,12 +33,13 @@ fi
 mkdir -p logs
 
 
-# Ultra-conservative fresh training from scratch (no resume)
-python scripts/train_single_gpu.py \
-    --output-dir ./outputs_scratch \
+# Ultra-conservative training with minimal model
+python scripts/train_flexible.py \
+    --preset default \
+    --output-dir ./outputs_conservative \
     --dataset gigaspeech \
     --subset xs \
-    --epochs 5 \
-    --batch-size 8 \
-    --lr 5e-4
+    --epochs 10 \
+    --lr 2e-5 \
+    --batch-size 8
 

@@ -52,11 +52,13 @@ nvidia-smi topo -m
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
 
 torchrun --nproc_per_node=2 scripts/train_flexible.py \
-    --preset rtx6000-2gpu \
-    --output-dir ./outputs \
+    --preset default \
+    --output-dir ./outputs_conservative \
     --dataset gigaspeech \
-    --subset m \
-    --epochs 20 \
+    --subset xs \
+    --epochs 10 \
+    --lr 2e-5 \
+    --batch-size 16
 
 # For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \

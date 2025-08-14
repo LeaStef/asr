@@ -1,14 +1,14 @@
 model:
   encoder:
     input_size: 80
-    hidden_size: 512
-    memory_size: 256
-    num_lmu_layers: 4
+    hidden_size: 256
+    memory_size: 128
+    num_lmu_layers: 2
     theta: 1000
     dropout: 0.1
     use_fft_lmu: false
     use_attention: true
-    num_attention_heads: 8
+    num_attention_heads: 4
     use_downsampling: false
     downsample_factor: 2
   decoder:
@@ -25,13 +25,13 @@ data:
   num_workers: 16  # Increased from 4 for better I/O performance
 
 training:
-  batch_size: 16
-  lr: 1e-4  # Reduced learning rate for stability
+  batch_size: 8
+  lr: 2e-5  # Ultra-conservative learning rate
   max_epochs: 50
-  patience: 10
-  mixed_precision: true
-  gradient_clip_norm: 0.5  # Reduced gradient clipping for stability
+  patience: 15
+  mixed_precision: false  # Disable for numerical stability
+  gradient_clip_norm: 1.0  # Higher clipping for stability
   accumulate_grad_batches: 1
-  warmup_steps: 1000  # Add warmup for stability
+  warmup_steps: 2000  # Longer warmup for stability
   weight_decay: 0.01  # Add weight decay for regularization
-  log_interval: 50  # Log every 50 steps to reduce overhead
+  log_interval: 20  # More frequent logging for monitoring
