@@ -26,12 +26,12 @@ data:
 
 training:
   batch_size: 8
-  lr: 2e-5  # Ultra-conservative learning rate
+  lr: 5e-5  # Sweet spot learning rate
   max_epochs: 50
   patience: 15
   mixed_precision: false  # Disable for numerical stability
-  gradient_clip_norm: 1.0  # Higher clipping for stability
+  gradient_clip_norm: 0.5  # Aggressive gradient clipping for stability
   accumulate_grad_batches: 1
-  warmup_steps: 2000  # Longer warmup for stability
+  warmup_steps: 1000  # Moderate warmup
   weight_decay: 0.01  # Add weight decay for regularization
   log_interval: 20  # More frequent logging for monitoring

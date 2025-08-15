@@ -53,11 +53,11 @@ nvidia-smi topo -m
 
 torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --preset default \
-    --output-dir ./outputs_conservative \
+    --output-dir ./outputs_sweetspot \
     --dataset gigaspeech \
     --subset xs \
     --epochs 10 \
-    --lr 2e-5 \
+    --lr 5e-5 \
     --batch-size 16
 
 # For faster testing, use smaller subsets:
