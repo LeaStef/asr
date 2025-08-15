@@ -58,7 +58,9 @@ torchrun --nproc_per_node=2 scripts/train_flexible.py \
     --subset xs \
     --epochs 10 \
     --lr 5e-5 \
-    --batch-size 16
+    --batch-size 16 \
+    --gradient-clip 0.5 \
+    --no-mixed-precision
 
 # For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \

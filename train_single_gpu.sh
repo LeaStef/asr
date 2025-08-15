@@ -36,10 +36,12 @@ mkdir -p logs
 # Ultra-conservative training with minimal model
 python scripts/train_flexible.py \
     --preset default \
-    --output-dir ./outputs_conservative \
+    --output-dir ./outputs_sweetspot \
     --dataset gigaspeech \
     --subset xs \
     --epochs 10 \
-    --lr 2e-5 \
-    --batch-size 8
+    --lr 5e-5 \
+    --batch-size 8 \
+    --gradient-clip 0.5 \
+    --no-mixed-precision
 
