@@ -51,7 +51,7 @@ nvidia-smi topo -m
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
 
-torchrun --nproc_per_node=2 scripts/train_flexible.py \
+torchrun --nproc_per_node=2 --master_port=29501 scripts/train_flexible.py \
     --preset default \
     --output-dir ./outputs_sweetspot \
     --dataset gigaspeech \

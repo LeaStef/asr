@@ -12,7 +12,7 @@ model:
     use_downsampling: false
     downsample_factor: 2
   decoder:
-    vocab_size: 32
+    vocab_size: 29
 
 data:
   dataset: "gigaspeech"    
