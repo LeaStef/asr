@@ -33,15 +33,17 @@ fi
 mkdir -p logs
 
 
-# Ultra-conservative training with minimal model
+# Improved training configuration for better performance
 python scripts/train_flexible.py \
     --preset default \
-    --output-dir ./outputs_sweetspot \
+    --output-dir ./outputs_improved \
     --dataset gigaspeech \
     --subset xs \
-    --epochs 10 \
-    --lr 5e-5 \
-    --batch-size 8 \
-    --gradient-clip 0.5 \
-    --no-mixed-precision
+    --epochs 50 \
+    --lr 1e-3 \
+    --batch-size 16 \
+    --gradient-clip 1.0 \
+    --accumulate-grad-batches 2 \
+    --warmup-steps 2000 \
+    --mixed-precision
 
