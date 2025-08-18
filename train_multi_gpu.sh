@@ -60,8 +60,6 @@ torchrun --nproc_per_node=2 --master_port=29501 scripts/train_flexible.py \
     --lr 1e-3 \
     --batch-size 16 \
     --gradient-clip 1.0 \
-    --accumulate-grad-batches 2 \
-    --warmup-steps 2000 \
     --mixed-precision
 
 # For faster testing, use smaller subsets:
