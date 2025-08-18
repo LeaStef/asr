@@ -1,14 +1,14 @@
 model:
   encoder:
     input_size: 80
-    hidden_size: 256
-    memory_size: 128
-    num_lmu_layers: 2
+    hidden_size: 512  # Increased capacity
+    memory_size: 256  # Increased memory capacity
+    num_lmu_layers: 4  # More layers for better representation
     theta: 1000
     dropout: 0.1
     use_fft_lmu: false
     use_attention: true
-    num_attention_heads: 4
+    num_attention_heads: 8  # More attention heads
     use_downsampling: false
     downsample_factor: 2
   decoder:
@@ -25,13 +25,13 @@ data:
   num_workers: 16  # Increased from 4 for better I/O performance
 
 training:
-  batch_size: 8
-  lr: 5e-5  # Sweet spot learning rate
+  batch_size: 16  # Increased for better gradient stability
+  lr: 1e-3  # Standard learning rate for Adam optimizer
   max_epochs: 50
   patience: 15
-  mixed_precision: false  # Disable for numerical stability
-  gradient_clip_norm: 0.5  # Aggressive gradient clipping for stability
-  accumulate_grad_batches: 1
-  warmup_steps: 1000  # Moderate warmup
-  weight_decay: 0.01  # Add weight decay for regularization
+  mixed_precision: true  # Re-enable for better training efficiency
+  gradient_clip_norm: 1.0  # Less aggressive clipping
+  accumulate_grad_batches: 2  # Effective batch size of 32
+  warmup_steps: 2000  # Extended warmup for stable training
+  weight_decay: 0.01  # Keep weight decay for regularization
   log_interval: 20  # More frequent logging for monitoring
