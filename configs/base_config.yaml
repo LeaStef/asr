@@ -1,15 +1,15 @@
 model:
   encoder:
     input_size: 80
-    hidden_size: 512  # Increased capacity
-    memory_size: 256  # Increased memory capacity
-    num_lmu_layers: 4  # More layers for better representation
+    hidden_size: 384  # Optimized for speed vs accuracy balance
+    memory_size: 192  # Proportional memory capacity
+    num_lmu_layers: 3  # Balanced layer count for speed
     theta: 1000
     dropout: 0.1
-    use_fft_lmu: false
+    use_fft_lmu: false  # Disable FFT for variable sequence lengths
     use_attention: true
-    num_attention_heads: 8  # More attention heads
-    use_downsampling: false
+    num_attention_heads: 6  # Optimized attention heads
+    use_downsampling: false  # Disable downsampling for stable training
     downsample_factor: 2
   decoder:
     vocab_size: 29
@@ -20,18 +20,18 @@ data:
   save_dir: "./data/gigaspeech"
   sample_rate: 16000
   n_mels: 80
-  max_seq_len: 500  # Reduced from 1000 for better performance
-  augment: true
-  num_workers: 16  # Increased from 4 for better I/O performance
+  max_seq_len: 400  # Further reduced for faster processing
+  augment: false  # Disable for initial fast training
+  num_workers: 32  # Optimized for high-performance training
 
 training:
-  batch_size: 16  # Increased for better gradient stability
-  lr: 1e-3  # Standard learning rate for Adam optimizer
+  batch_size: 32  # Optimized for GPU memory utilization
+  lr: 1.5e-3  # Slightly higher for faster convergence
   max_epochs: 50
-  patience: 15
-  mixed_precision: true  # Re-enable for better training efficiency
-  gradient_clip_norm: 1.0  # Less aggressive clipping
-  accumulate_grad_batches: 2  # Effective batch size of 32
-  warmup_steps: 2000  # Extended warmup for stable training
-  weight_decay: 0.01  # Keep weight decay for regularization
-  log_interval: 20  # More frequent logging for monitoring
+  patience: 10  # Reduced patience for faster training cycles
+  mixed_precision: true  # Essential for speed and memory
+  gradient_clip_norm: 1.0  # Optimal clipping for stability
+  accumulate_grad_batches: 1  # Direct batch processing for speed
+  warmup_steps: 1500  # Balanced warmup for fast start
+  weight_decay: 0.01  # Regularization
+  log_interval: 10  # More frequent monitoring

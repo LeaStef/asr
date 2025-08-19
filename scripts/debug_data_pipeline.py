@@ -5,7 +5,8 @@ import sys
 import torch
 from pathlib import Path
 
-# Add src to path
+# Change to parent directory to ensure relative paths work correctly
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append("src")
 
 from config.config import create_config_from_dict

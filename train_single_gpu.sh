@@ -1,11 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=lmu-asr-single-gpu-debug
-#SBATCH --time=168:00:00
-#SBATCH --mem=64GB
-#SBATCH --cpus-per-task=8
+#SBATCH --job-name=lmu-asr-single-gpu-optimized
+#SBATCH --time=72:00:00
+#SBATCH --mem=128GB
+#SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
 #SBATCH --partition=CELIASMI
+#SBATCH --exclusive
+#SBATCH --hint=nomultithread
 
 # Email notifications
 #SBATCH --mail-user=h6ly@uwaterloo.ca
@@ -15,6 +17,14 @@
 #SBATCH -o JOB%j.out
 #SBATCH -e JOB%j-err.out
 
+
+# Performance optimizations
+export OMP_NUM_THREADS=16
+export MKL_NUM_THREADS=16
+export CUDA_LAUNCH_BLOCKING=0
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256,expandable_segments:True
+export TORCH_CUDNN_V8_API_ENABLED=1
+export TORCH_COMPILE_MODE=reduce-overhead
 
 # Set up environment
 log_dir=$HOME/asr
@@ -28,20 +38,24 @@ elif [ -f "$log_dir/bin/activate" ]; then
     source $log_dir/bin/activate
 fi
 
-
-# Create logs directory
+# Create logs directory with better I/O
 mkdir -p logs
 
+# GPU optimization
+nvidia-smi
+export CUDA_VISIBLE_DEVICES=0
 
-# Improved training configuration for better performance
-python scripts/train_flexible.py \
+
+# Optimized training with performance improvements
+python -u scripts/train_flexible.py \
     --preset default \
-    --output-dir ./outputs_improved \
+    --output-dir ./outputs_optimized \
     --dataset gigaspeech \
-    --subset xs \
+    --subset m \
     --epochs 50 \
     --lr 1e-3 \
-    --batch-size 16 \
+    --batch-size 48 \
     --gradient-clip 1.0 \
-    --mixed-precision
+    --mixed-precision \
+    --num-workers 16
 

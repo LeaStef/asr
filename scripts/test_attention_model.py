@@ -5,6 +5,8 @@ Test script for the attention-enhanced LMU ASR model.
 
 import sys
 import os
+# Change to parent directory to ensure relative paths work correctly
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('src')
 
 import torch
