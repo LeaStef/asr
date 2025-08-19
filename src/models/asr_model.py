@@ -279,11 +279,14 @@ class LMUASRModel(nn.Module):
                 nn.init.constant_(module.bias, 0.0)
                 nn.init.constant_(module.weight, 1.0)
         
-        # Special initialization for CTC projection layer - smaller weights
+        # Special initialization for CTC projection layer - bias toward blank token
         if hasattr(self.decoder, 'ctc_projection'):
             nn.init.xavier_uniform_(self.decoder.ctc_projection.weight, gain=0.1)
             if self.decoder.ctc_projection.bias is not None:
-                nn.init.constant_(self.decoder.ctc_projection.bias, 0.0)
+                # Initialize all biases to slightly negative (favor blank token)
+                nn.init.constant_(self.decoder.ctc_projection.bias, -0.5)
+                # Set blank token bias to positive to strongly favor it initially
+                self.decoder.ctc_projection.bias.data[self.config.vocab_size - 1] = 2.0
     
     def get_num_params(self) -> int:
         """Get total number of parameters."""
