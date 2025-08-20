@@ -30,7 +30,7 @@ training:
   max_epochs: 50
   patience: 10  # Reduced patience for faster training cycles
   mixed_precision: true  # Essential for speed and memory
-  gradient_clip_norm: 1.0  # Optimal clipping for stability
+  gradient_clip_norm: 10.0  # Relaxed clipping to allow CTC alignment learning
   accumulate_grad_batches: 1  # Direct batch processing for speed
   warmup_steps: 1500  # Balanced warmup for fast start
   weight_decay: 0.01  # Regularization
