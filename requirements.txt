@@ -35,8 +35,9 @@ fairscale>=0.4.0
 python-speech-features>=0.6
 pesq>=0.0.4
 
-# Optimization
+# Optimization and model analysis
 torch-optimizer>=0.3.0
+torchinfo>=1.8.0
 
 # Development and testing
 pytest>=7.0.0

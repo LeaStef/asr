@@ -421,8 +421,11 @@ class DistributedTrainer:
                     val_cer=val_cer
                 )
                 
-                # Get model statistics
-                model_stats = get_model_stats(self.model)
+                # Get model statistics with input shape for torchinfo
+                input_shape = None
+                if self.data_config:
+                    input_shape = (1, self.data_config.max_seq_len, self.data_config.n_mels)
+                model_stats = get_model_stats(self.model, input_shape)
                 
                 # Print epoch summary
                 print(f"Epoch {epoch + 1} Summary:")
@@ -432,8 +435,24 @@ class DistributedTrainer:
                 print(f"  Val CER: {val_cer:.4f}")
                 print(f"  Time: {epoch_time:.2f}s")
                 print(f"  Model: {model_stats['total_params']:,} params ({model_stats['model_size_mb']:.1f}MB)")
-                print(f"    ├─ Encoder: {model_stats['encoder_params']:,} params ({model_stats['encoder_params']/model_stats['total_params']*100:.1f}%)")
-                print(f"    └─ Decoder: {model_stats['decoder_params']:,} params ({model_stats['decoder_params']/model_stats['total_params']*100:.1f}%)")
+                
+                # Enhanced breakdown with attention params
+                if model_stats['attention_params'] > 0:
+                    print(f"    ├─ Encoder: {model_stats['encoder_params']:,} params ({model_stats['encoder_params']/model_stats['total_params']*100:.1f}%)")
+                    print(f"    ├─ Attention: {model_stats['attention_params']:,} params ({model_stats['attention_params']/model_stats['total_params']*100:.1f}%)")
+                    print(f"    └─ Decoder: {model_stats['decoder_params']:,} params ({model_stats['decoder_params']/model_stats['total_params']*100:.1f}%)")
+                else:
+                    print(f"    ├─ Encoder: {model_stats['encoder_params']:,} params ({model_stats['encoder_params']/model_stats['total_params']*100:.1f}%)")
+                    print(f"    └─ Decoder: {model_stats['decoder_params']:,} params ({model_stats['decoder_params']/model_stats['total_params']*100:.1f}%)")
+                
+                # Add FLOPs info if available from torchinfo
+                if 'model_flops' in model_stats:
+                    print(f"  FLOPs: {model_stats['model_flops']:,} ({model_stats['model_flops']/1e9:.2f}G)")
+                
+                # Print detailed torchinfo summary on first epoch
+                if epoch == 0 and 'torchinfo_summary' in model_stats:
+                    print(f"\n📋 Detailed Model Architecture (torchinfo):")
+                    print(model_stats['torchinfo_summary'])
             
             # Save checkpoint (only on main process)
             if is_main_process():

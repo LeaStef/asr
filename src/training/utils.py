@@ -7,6 +7,12 @@ from typing import Dict, List, Optional, Tuple, Any
 import jiwer
 from pathlib import Path
 
+try:
+    from torchinfo import summary
+    TORCHINFO_AVAILABLE = True
+except ImportError:
+    TORCHINFO_AVAILABLE = False
+
 
 class EarlyStopping:
     """
@@ -391,12 +397,13 @@ def log_model_summary(model: nn.Module, input_shape: Tuple[int, ...],
             print(f"  Forward pass test failed: {e}")
 
 
-def get_model_stats(model: nn.Module) -> Dict[str, Any]:
+def get_model_stats(model: nn.Module, input_shape: Tuple[int, ...] = None) -> Dict[str, Any]:
     """
-    Get compact model statistics for epoch summaries.
+    Get compact model statistics for epoch summaries using torchinfo.
     
     Args:
         model: PyTorch model (can be DDP wrapped)
+        input_shape: Input shape for torchinfo summary (batch_size, seq_len, features)
         
     Returns:
         stats: Dictionary with model statistics
@@ -404,6 +411,7 @@ def get_model_stats(model: nn.Module) -> Dict[str, Any]:
     # Handle DDP wrapped models
     underlying_model = model.module if hasattr(model, 'module') else model
     
+    # Get basic parameter counts
     total_params, trainable_params = calculate_model_size(underlying_model)
     
     # Calculate memory usage (approximate)
@@ -412,21 +420,43 @@ def get_model_stats(model: nn.Module) -> Dict[str, Any]:
     # Count parameters by type
     encoder_params = 0
     decoder_params = 0
+    attention_params = 0
     
     for name, param in underlying_model.named_parameters():
         if 'encoder' in name:
             encoder_params += param.numel()
         elif 'decoder' in name:
             decoder_params += param.numel()
+        if 'attention' in name:
+            attention_params += param.numel()
     
-    return {
+    stats = {
         'total_params': total_params,
         'trainable_params': trainable_params,
         'encoder_params': encoder_params,
         'decoder_params': decoder_params,
+        'attention_params': attention_params,
         'model_size_mb': model_size_mb,
         'trainable_ratio': trainable_params / total_params if total_params > 0 else 0.0
     }
+    
+    # Add torchinfo summary if available and input shape provided
+    if TORCHINFO_AVAILABLE and input_shape is not None:
+        try:
+            # Create torchinfo summary
+            model_summary = summary(
+                underlying_model,
+                input_size=input_shape,
+                verbose=0,  # Don't print, just return
+                col_names=["output_size", "num_params", "mult_adds"]
+            )
+            stats['torchinfo_summary'] = str(model_summary)
+            stats['model_flops'] = model_summary.total_mult_adds
+            stats['model_memory_mb'] = model_summary.total_input + model_summary.total_output_bytes / 1e6
+        except Exception as e:
+            stats['torchinfo_error'] = str(e)
+    
+    return stats
 
 
 def gradient_clipping(model: nn.Module, max_norm: float = 1.0) -> float:
