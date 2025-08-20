@@ -3,7 +3,7 @@ import torch.nn as nn
 import os
 import json
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import jiwer
 from pathlib import Path
 
@@ -389,6 +389,44 @@ def log_model_summary(model: nn.Module, input_shape: Tuple[int, ...],
             print(f"  Output shape: {output.shape}")
         except Exception as e:
             print(f"  Forward pass test failed: {e}")
+
+
+def get_model_stats(model: nn.Module) -> Dict[str, Any]:
+    """
+    Get compact model statistics for epoch summaries.
+    
+    Args:
+        model: PyTorch model (can be DDP wrapped)
+        
+    Returns:
+        stats: Dictionary with model statistics
+    """
+    # Handle DDP wrapped models
+    underlying_model = model.module if hasattr(model, 'module') else model
+    
+    total_params, trainable_params = calculate_model_size(underlying_model)
+    
+    # Calculate memory usage (approximate)
+    model_size_mb = total_params * 4 / 1e6  # 4 bytes per float32 parameter
+    
+    # Count parameters by type
+    encoder_params = 0
+    decoder_params = 0
+    
+    for name, param in underlying_model.named_parameters():
+        if 'encoder' in name:
+            encoder_params += param.numel()
+        elif 'decoder' in name:
+            decoder_params += param.numel()
+    
+    return {
+        'total_params': total_params,
+        'trainable_params': trainable_params,
+        'encoder_params': encoder_params,
+        'decoder_params': decoder_params,
+        'model_size_mb': model_size_mb,
+        'trainable_ratio': trainable_params / total_params if total_params > 0 else 0.0
+    }
 
 
 def gradient_clipping(model: nn.Module, max_norm: float = 1.0) -> float:
