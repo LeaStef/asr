@@ -443,18 +443,57 @@ def get_model_stats(model: nn.Module, input_shape: Tuple[int, ...] = None) -> Di
     # Add torchinfo summary if available and input shape provided
     if TORCHINFO_AVAILABLE and input_shape is not None:
         try:
-            # Create torchinfo summary
+            # Create torchinfo summary with detailed columns
             model_summary = summary(
                 underlying_model,
                 input_size=input_shape,
                 verbose=0,  # Don't print, just return
-                col_names=["output_size", "num_params", "mult_adds"]
+                col_names=["input_size", "output_size", "num_params", "params_percent", 
+                          "kernel_size", "mult_adds", "trainable"],
+                row_settings=["var_names"],  # Show layer names
+                depth=4  # Show more nested layers
             )
             stats['torchinfo_summary'] = str(model_summary)
+            
+            # Extract comprehensive statistics from torchinfo
             stats['model_flops'] = model_summary.total_mult_adds
-            stats['model_memory_mb'] = model_summary.total_input + model_summary.total_output_bytes / 1e6
+            stats['model_memory_mb'] = (model_summary.total_input + model_summary.total_output_bytes) / 1e6
+            stats['model_size_mb'] = model_summary.total_param_bytes / 1e6
+            stats['forward_pass_size_mb'] = model_summary.total_output_bytes / 1e6
+            stats['backward_pass_size_mb'] = model_summary.total_output_bytes * 2 / 1e6  # Approximate
+            stats['total_memory_estimate_mb'] = (
+                model_summary.total_param_bytes + 
+                model_summary.total_output_bytes * 3  # Forward + backward + gradients
+            ) / 1e6
+            
+            # Layer breakdown statistics
+            if hasattr(model_summary, 'summary_list'):
+                layer_info = {}
+                for layer in model_summary.summary_list:
+                    layer_name = layer.layer_name or "unnamed"
+                    layer_info[layer_name] = {
+                        'params': layer.num_params,
+                        'flops': getattr(layer, 'mult_adds', 0),
+                        'output_size': str(layer.output_size) if hasattr(layer, 'output_size') else 'unknown'
+                    }
+                stats['layer_breakdown'] = layer_info
         except Exception as e:
-            stats['torchinfo_error'] = str(e)
+            # More detailed error handling for torchinfo failures
+            error_msg = f"torchinfo failed: {type(e).__name__}: {str(e)}"
+            stats['torchinfo_error'] = error_msg
+            
+            # Try basic torchinfo with minimal options as fallback
+            try:
+                fallback_summary = summary(
+                    underlying_model,
+                    input_size=input_shape,
+                    verbose=0,
+                    col_names=["output_size", "num_params"]
+                )
+                stats['torchinfo_fallback'] = str(fallback_summary)
+                stats['model_flops'] = getattr(fallback_summary, 'total_mult_adds', 0)
+            except Exception as fallback_e:
+                stats['torchinfo_fallback_error'] = f"Fallback also failed: {str(fallback_e)}"
     
     return stats
 

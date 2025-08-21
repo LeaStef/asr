@@ -445,14 +445,41 @@ class DistributedTrainer:
                     print(f"    ├─ Encoder: {model_stats['encoder_params']:,} params ({model_stats['encoder_params']/model_stats['total_params']*100:.1f}%)")
                     print(f"    └─ Decoder: {model_stats['decoder_params']:,} params ({model_stats['decoder_params']/model_stats['total_params']*100:.1f}%)")
                 
-                # Add FLOPs info if available from torchinfo
+                # Add comprehensive torchinfo statistics if available
                 if 'model_flops' in model_stats:
                     print(f"  FLOPs: {model_stats['model_flops']:,} ({model_stats['model_flops']/1e9:.2f}G)")
+                
+                if 'model_size_mb' in model_stats:
+                    print(f"  Model Size: {model_stats['model_size_mb']:.1f} MB")
+                
+                if 'total_memory_estimate_mb' in model_stats:
+                    print(f"  Est. Training Memory: {model_stats['total_memory_estimate_mb']:.1f} MB")
                 
                 # Print detailed torchinfo summary on first epoch
                 if epoch == 0 and 'torchinfo_summary' in model_stats:
                     print(f"\n📋 Detailed Model Architecture (torchinfo):")
                     print(model_stats['torchinfo_summary'])
+                    
+                    # Print layer breakdown if available
+                    if 'layer_breakdown' in model_stats:
+                        print(f"\n📊 Top Parameter-Heavy Layers:")
+                        layer_breakdown = model_stats['layer_breakdown']
+                        # Sort by parameter count and show top 5
+                        sorted_layers = sorted(
+                            layer_breakdown.items(),
+                            key=lambda x: x[1]['params'],
+                            reverse=True
+                        )[:5]
+                        for layer_name, info in sorted_layers:
+                            if info['params'] > 0:
+                                print(f"  {layer_name}: {info['params']:,} params, {info['flops']:,} FLOPs")
+                
+                # Show fallback info if main torchinfo failed
+                if epoch == 0 and 'torchinfo_error' in model_stats:
+                    print(f"\n⚠️  torchinfo error: {model_stats['torchinfo_error']}")
+                    if 'torchinfo_fallback' in model_stats:
+                        print("📋 Basic Model Summary (fallback):")
+                        print(model_stats['torchinfo_fallback'])
             
             # Save checkpoint (only on main process)
             if is_main_process():
