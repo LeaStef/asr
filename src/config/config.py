@@ -34,9 +34,9 @@ class DataConfig:
 @dataclass
 class TrainingConfig:
     batch_size: int = 16
-    lr: float = 1e-3
+    lr: float = 1e-4
     max_epochs: int = 50
-    patience: int = 10
+    patience: int = 25
     mixed_precision: bool = True
     gradient_clip_norm: float = 1.0
     accumulate_grad_batches: int = 1
