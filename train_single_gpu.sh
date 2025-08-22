@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=lmu-asr-single-gpu-optimized
-#SBATCH --time=72:00:00
+#SBATCH --time=168:00:00
 #SBATCH --mem=128GB
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
