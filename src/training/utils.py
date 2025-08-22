@@ -17,20 +17,25 @@ except ImportError:
 class EarlyStopping:
     """
     Early stopping utility to monitor validation metrics.
+    Enhanced for CTC training with more appropriate defaults.
     """
     
-    def __init__(self, patience: int = 10, min_delta: float = 0.0, mode: str = 'min'):
+    def __init__(self, patience: int = 25, min_delta: float = 0.001, mode: str = 'min', 
+                 warmup_epochs: int = 10):
         """
         Initialize early stopping.
         
         Args:
-            patience: Number of epochs to wait before stopping
-            min_delta: Minimum change to qualify as improvement
+            patience: Number of epochs to wait before stopping (increased for CTC)
+            min_delta: Minimum change to qualify as improvement (smaller for gradual improvements)
             mode: 'min' for metrics that should decrease, 'max' for metrics that should increase
+            warmup_epochs: Number of epochs before early stopping can trigger
         """
         self.patience = patience
         self.min_delta = min_delta
         self.mode = mode
+        self.warmup_epochs = warmup_epochs
+        self.epoch_count = 0
         self.best_score = None
         self.counter = 0
         self.early_stop = False
@@ -50,6 +55,19 @@ class EarlyStopping:
         Returns:
             early_stop: Whether to stop training
         """
+        self.epoch_count += 1
+        
+        # Don't trigger early stopping during warmup period
+        if self.epoch_count <= self.warmup_epochs:
+            if self.mode == 'min':
+                if score < self.best_score:
+                    self.best_score = score
+            else:
+                if score > self.best_score:
+                    self.best_score = score
+            return False
+        
+        # Normal early stopping logic after warmup
         if self.mode == 'min':
             if score < self.best_score - self.min_delta:
                 self.best_score = score
@@ -59,6 +77,88 @@ class EarlyStopping:
         else:
             if score > self.best_score + self.min_delta:
                 self.best_score = score
+                self.counter = 0
+            else:
+                self.counter += 1
+        
+        if self.counter >= self.patience:
+            self.early_stop = True
+        
+        return self.early_stop
+
+
+class CTCEarlyStopping:
+    """
+    CTC-specific early stopping that monitors both WER and CER.
+    Designed for speech recognition training where CER often improves before WER.
+    """
+    
+    def __init__(self, patience: int = 25, min_delta: float = 0.001, warmup_epochs: int = 10,
+                 wer_weight: float = 0.7, cer_weight: float = 0.3):
+        """
+        Initialize CTC early stopping.
+        
+        Args:
+            patience: Number of epochs to wait before stopping
+            min_delta: Minimum change to qualify as improvement
+            warmup_epochs: Number of epochs before early stopping can trigger
+            wer_weight: Weight for WER in combined metric
+            cer_weight: Weight for CER in combined metric
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.warmup_epochs = warmup_epochs
+        self.wer_weight = wer_weight
+        self.cer_weight = cer_weight
+        self.epoch_count = 0
+        self.best_combined_score = float('inf')
+        self.best_wer = float('inf')
+        self.best_cer = float('inf')
+        self.counter = 0
+        self.early_stop = False
+    
+    def __call__(self, wer: float, cer: float) -> bool:
+        """
+        Check if early stopping should be triggered based on WER and CER.
+        
+        Args:
+            wer: Current word error rate
+            cer: Current character error rate
+            
+        Returns:
+            early_stop: Whether to stop training
+        """
+        self.epoch_count += 1
+        
+        # Calculate combined score (weighted average)
+        combined_score = self.wer_weight * wer + self.cer_weight * cer
+        
+        # Don't trigger early stopping during warmup period
+        if self.epoch_count <= self.warmup_epochs:
+            if combined_score < self.best_combined_score:
+                self.best_combined_score = combined_score
+                self.best_wer = wer
+                self.best_cer = cer
+            return False
+        
+        # Check for improvement in combined metric
+        if combined_score < self.best_combined_score - self.min_delta:
+            self.best_combined_score = combined_score
+            self.best_wer = wer
+            self.best_cer = cer
+            self.counter = 0
+        else:
+            # Also check for significant improvement in either individual metric
+            wer_improvement = (self.best_wer - wer) > (self.min_delta * 2)
+            cer_improvement = (self.best_cer - cer) > (self.min_delta * 2)
+            
+            if wer_improvement or cer_improvement:
+                if wer < self.best_wer:
+                    self.best_wer = wer
+                if cer < self.best_cer:
+                    self.best_cer = cer
+                if combined_score < self.best_combined_score:
+                    self.best_combined_score = combined_score
                 self.counter = 0
             else:
                 self.counter += 1
