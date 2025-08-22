@@ -13,11 +13,11 @@ Usage Examples:
     torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128
     
     # L40S GPU optimization
-    python scripts/train_flexible.py --batch-size 64 --lr 4e-3 --preset l40s-1gpu
-    torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128 --lr 8e-3 --preset l40s-2gpu
+    python scripts/train_flexible.py --batch-size 64 --lr 4e-4 --preset l40s-1gpu
+    torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128 --lr 8e-4 --preset l40s-2gpu
     
     # Full customization
-    python scripts/train_flexible.py --batch-size 32 --lr 2e-3 --epochs 10 --mixed-precision
+    python scripts/train_flexible.py --batch-size 32 --lr 2e-4 --epochs 10 --mixed-precision
 """
 
 import argparse
@@ -63,49 +63,49 @@ def get_preset_config(preset: str) -> dict:
     presets = {
         'l40s-1gpu': {
             'batch_size': 64,
-            'lr': 4e-3,
+            'lr': 4e-4,  # Reduced for better CTC convergence
             'epochs': 35,
             'num_workers': 6,
             'mixed_precision': True,
         },
         'l40s-2gpu': {
             'batch_size': 128,
-            'lr': 8e-3,
+            'lr': 8e-4,  # Reduced for better CTC convergence
             'epochs': 25,
             'num_workers': 8,
             'mixed_precision': True,
         },
         'a100-1gpu': {
             'batch_size': 48,
-            'lr': 3e-3,
+            'lr': 3e-4,  # Reduced for better CTC convergence
             'epochs': 40,
             'num_workers': 6,
             'mixed_precision': True,
         },
         'a100-2gpu': {
             'batch_size': 96,
-            'lr': 6e-3,
+            'lr': 6e-4,  # Reduced for better CTC convergence
             'epochs': 30,
             'num_workers': 8,
             'mixed_precision': True,
         },
         'rtx6000-1gpu': {
             'batch_size': 24,  # Conservative batch size for stability
-            'lr': 1e-4,        # Conservative learning rate to prevent NaN
+            'lr': 1e-4,        # Already optimal for CTC training
             'epochs': 30,
             'num_workers': 12,
             'mixed_precision': False,  # Disable to prevent numerical issues
         },
         'rtx6000-2gpu': {
             'batch_size': 32,  # Much more conservative batch size
-            'lr': 1e-4,        # Conservative learning rate to prevent NaN
+            'lr': 1e-4,        # Already optimal for CTC training
             'epochs': 25,
             'num_workers': 16,
             'mixed_precision': False,  # Disable to prevent numerical issues
         },
         'default': {
             'batch_size': 16,
-            'lr': 1e-3,
+            'lr': 1e-4,        # Updated to optimal CTC learning rate
             'epochs': 50,
             'num_workers': 4,
             'mixed_precision': True,

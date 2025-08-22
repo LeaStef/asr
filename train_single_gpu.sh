@@ -53,9 +53,8 @@ python -u scripts/train_flexible.py \
     --dataset gigaspeech \
     --subset m \
     --epochs 50 \
-    --lr 1e-3 \
+    --lr 1e-4 \
     --batch-size 48 \
-    --gradient-clip 1.0 \
     --mixed-precision \
     --num-workers 16
 

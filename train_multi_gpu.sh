@@ -62,9 +62,8 @@ torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d s
 --dataset gigaspeech \
 --subset m \
 --epochs 50 \
---lr 2.5e-3 \
+--lr 2.5e-4 \
 --batch-size 96 \
---gradient-clip 1.0 \
 --mixed-precision \
 --num-workers 32
 
