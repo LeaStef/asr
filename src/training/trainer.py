@@ -306,7 +306,7 @@ class Trainer:
                 break
             
             # Print validation examples
-            if epoch % getattr(self.config, 'example_interval', 5) == 0:
+            if epoch % getattr(self.config, 'example_interval', 1) == 0:
                 self._print_examples(val_loader, vocab, num_examples=3)
         
         print(f"\nTraining completed!")

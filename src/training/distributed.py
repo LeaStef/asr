@@ -510,7 +510,7 @@ class DistributedTrainer:
                 dist.barrier()
             
             # Print validation examples (only on main process)
-            if is_main_process() and epoch % getattr(self.training_config, 'example_interval', 5) == 0:
+            if is_main_process() and epoch % getattr(self.training_config, 'example_interval', 1) == 0:
                 self._print_examples(val_loader, vocab, num_examples=3)
         
         if is_main_process():
