@@ -21,7 +21,7 @@ class EarlyStopping:
     """
     
     def __init__(self, patience: int = 25, min_delta: float = 0.001, mode: str = 'min', 
-                 warmup_epochs: int = 10):
+                 warmup_epochs: int = 10, min_wer_threshold: float = 0.1):
         """
         Initialize early stopping.
         
@@ -30,32 +30,40 @@ class EarlyStopping:
             min_delta: Minimum change to qualify as improvement (smaller for gradual improvements)
             mode: 'min' for metrics that should decrease, 'max' for metrics that should increase
             warmup_epochs: Number of epochs before early stopping can trigger
+            min_wer_threshold: Minimum WER threshold before early stopping can trigger (default: 0.1 = 10%)
         """
         self.patience = patience
         self.min_delta = min_delta
         self.mode = mode
         self.warmup_epochs = warmup_epochs
+        self.min_wer_threshold = min_wer_threshold
         self.epoch_count = 0
         self.best_score = None
         self.counter = 0
         self.early_stop = False
+        self.current_wer = float('inf')
         
         if mode == 'min':
             self.best_score = float('inf')
         else:
             self.best_score = float('-inf')
     
-    def __call__(self, score: float) -> bool:
+    def __call__(self, score: float, wer: float = None) -> bool:
         """
         Check if early stopping should be triggered.
         
         Args:
             score: Current validation score
+            wer: Current validation WER (optional, for WER threshold check)
             
         Returns:
             early_stop: Whether to stop training
         """
         self.epoch_count += 1
+        
+        # Update current WER if provided
+        if wer is not None:
+            self.current_wer = wer
         
         # Don't trigger early stopping during warmup period
         if self.epoch_count <= self.warmup_epochs:
@@ -65,6 +73,23 @@ class EarlyStopping:
             else:
                 if score > self.best_score:
                     self.best_score = score
+            return False
+        
+        # Don't trigger early stopping if WER is still above threshold
+        if self.current_wer > self.min_wer_threshold:
+            # Still update best score but don't stop
+            if self.mode == 'min':
+                if score < self.best_score:
+                    self.best_score = score
+                    self.counter = 0
+                else:
+                    self.counter += 1
+            else:
+                if score > self.best_score:
+                    self.best_score = score
+                    self.counter = 0
+                else:
+                    self.counter += 1
             return False
         
         # Normal early stopping logic after warmup
@@ -94,7 +119,7 @@ class CTCEarlyStopping:
     """
     
     def __init__(self, patience: int = 25, min_delta: float = 0.001, warmup_epochs: int = 10,
-                 wer_weight: float = 0.7, cer_weight: float = 0.3):
+                 wer_weight: float = 0.7, cer_weight: float = 0.3, min_wer_threshold: float = 0.1):
         """
         Initialize CTC early stopping.
         
@@ -104,12 +129,14 @@ class CTCEarlyStopping:
             warmup_epochs: Number of epochs before early stopping can trigger
             wer_weight: Weight for WER in combined metric
             cer_weight: Weight for CER in combined metric
+            min_wer_threshold: Minimum WER threshold before early stopping can trigger (default: 0.1 = 10%)
         """
         self.patience = patience
         self.min_delta = min_delta
         self.warmup_epochs = warmup_epochs
         self.wer_weight = wer_weight
         self.cer_weight = cer_weight
+        self.min_wer_threshold = min_wer_threshold
         self.epoch_count = 0
         self.best_combined_score = float('inf')
         self.best_wer = float('inf')
@@ -139,6 +166,31 @@ class CTCEarlyStopping:
                 self.best_combined_score = combined_score
                 self.best_wer = wer
                 self.best_cer = cer
+            return False
+        
+        # Don't trigger early stopping if WER is still above threshold
+        if wer > self.min_wer_threshold:
+            # Still update best scores but don't stop
+            if combined_score < self.best_combined_score:
+                self.best_combined_score = combined_score
+                self.best_wer = wer
+                self.best_cer = cer
+                self.counter = 0
+            else:
+                # Check for individual metric improvements
+                wer_improvement = (self.best_wer - wer) > (self.min_delta * 2)
+                cer_improvement = (self.best_cer - cer) > (self.min_delta * 2)
+                
+                if wer_improvement or cer_improvement:
+                    if wer < self.best_wer:
+                        self.best_wer = wer
+                    if cer < self.best_cer:
+                        self.best_cer = cer
+                    if combined_score < self.best_combined_score:
+                        self.best_combined_score = combined_score
+                    self.counter = 0
+                else:
+                    self.counter += 1
             return False
         
         # Check for improvement in combined metric

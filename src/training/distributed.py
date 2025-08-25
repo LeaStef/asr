@@ -501,7 +501,7 @@ class DistributedTrainer:
                 self.metrics_tracker.save(metrics_path)
             
             # Early stopping (only on main process)
-            if is_main_process() and self.early_stopping(val_wer):
+            if is_main_process() and self.early_stopping(val_wer, wer=val_wer):
                 print(f"Early stopping triggered after {epoch + 1} epochs")
                 break
             

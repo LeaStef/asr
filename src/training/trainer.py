@@ -301,7 +301,7 @@ class Trainer:
             self.metrics_tracker.save(metrics_path)
             
             # Early stopping
-            if self.early_stopping(val_wer):
+            if self.early_stopping(val_wer, wer=val_wer):
                 print(f"Early stopping triggered after {epoch + 1} epochs")
                 break
             
