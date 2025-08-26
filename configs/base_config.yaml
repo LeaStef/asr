@@ -12,7 +12,7 @@ model:
     use_downsampling: false  # Disable downsampling for stable training
     downsample_factor: 2
   decoder:
-    vocab_size: 29
+    vocab_size: 34
 
 data:
   dataset: "gigaspeech"    

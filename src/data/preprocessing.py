@@ -154,8 +154,8 @@ class TextPreprocessor:
     
     def create_default_vocabulary(self):
         """Create default character-level vocabulary."""
-        # Standard English characters + space + apostrophe
-        chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + [' ', "'"]
+        # Standard English characters + space + apostrophe + common punctuation
+        chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ') + [' ', "'", '.', ',', '?', '!', '-']
         
         # Add CTC blank token
         chars.append('<blank>')
@@ -191,6 +191,9 @@ class TextPreprocessor:
         Returns:
             indices: List of character indices
         """
+        # Preprocess special tokens to character equivalents
+        text = self._preprocess_special_tokens(text)
+        
         # Convert to uppercase and handle unknown characters
         text = text.upper()
         indices = []
@@ -205,6 +208,34 @@ class TextPreprocessor:
                 continue
         
         return indices
+    
+    def _preprocess_special_tokens(self, text: str) -> str:
+        """
+        Convert special tokens to their character equivalents.
+        
+        Args:
+            text: Input text with special tokens
+            
+        Returns:
+            text: Text with special tokens converted to characters
+        """
+        # Define token-to-character mappings
+        token_mappings = {
+            '<PERIOD>': '.',
+            '<COMMA>': ',',
+            '<QUESTION>': '?',
+            '<EXCLAMATION>': '!',
+            '<HYPHEN>': '-',
+            '<DASH>': '-',
+            '<DOT>': '.',
+            # Add more mappings as needed
+        }
+        
+        # Replace special tokens with their character equivalents
+        for token, char in token_mappings.items():
+            text = text.replace(token, char)
+        
+        return text
     
     def indices_to_text(self, indices: List[int]) -> str:
         """
