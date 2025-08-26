@@ -6,7 +6,6 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
 #SBATCH --partition=CELIASMI
-#SBATCH --exclusive
 #SBATCH --hint=nomultithread
 
 # Email notifications

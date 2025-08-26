@@ -6,7 +6,6 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:2
 #SBATCH --partition=CELIASMI
-#SBATCH --exclusive
 #SBATCH --hint=nomultithread
 
 # Email notifications (update with your watid)
