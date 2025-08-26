@@ -21,7 +21,7 @@
 export OMP_NUM_THREADS=16
 export MKL_NUM_THREADS=16
 export CUDA_LAUNCH_BLOCKING=0
-export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256,expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
 export TORCH_CUDNN_V8_API_ENABLED=1
 export TORCH_COMPILE_MODE=reduce-overhead
 
