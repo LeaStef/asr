@@ -467,6 +467,11 @@ def main():
         # Update vocab size in config BEFORE creating model
         config.model.vocab_size = vocab['vocab_size']
         
+        # Add barrier to ensure ALL ranks have finished loading vocabulary
+        if world_size > 1:
+            dist.barrier()
+            print(f"✅ Rank {rank}: Finished vocab loading, vocab_size={config.model.vocab_size}")
+        
         # Verify config consistency across ranks AFTER vocab_size is set
         if world_size > 1:
             vocab_size_tensor = torch.tensor(config.model.vocab_size, dtype=torch.long).cuda()
