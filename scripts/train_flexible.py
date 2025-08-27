@@ -304,6 +304,13 @@ def main():
         # Wrap model with DDP if distributed
         if world_size > 1:
             from torch.nn.parallel import DistributedDataParallel as DDP
+            
+            # Force synchronization before DDP initialization
+            if rank == 0:
+                print(f"🔄 Synchronizing GPUs before DDP initialization...")
+            dist.barrier()  # Ensure all processes reach this point
+            torch.cuda.synchronize()  # Ensure all CUDA operations complete
+            
             model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
             if rank == 0:
                 print(f"✅ Model wrapped with DDP")
