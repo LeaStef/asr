@@ -178,30 +178,20 @@ def setup_distributed():
         dist.init_process_group(backend=backend)
         torch.cuda.set_device(local_rank)
         
-        # Synchronize random seeds across all processes
+        # Set fixed random seed across all ranks (avoid NCCL broadcast issues)
         import random
         import numpy as np
         
-        # Use rank 0's random state as the base seed
-        if rank == 0:
-            base_seed = random.randint(0, 2**32 - 1)
-            seed_tensor = torch.tensor(base_seed, dtype=torch.long).cuda()
-        else:
-            seed_tensor = torch.tensor(0, dtype=torch.long).cuda()
-        
-        # Broadcast seed from rank 0 to all ranks
-        dist.broadcast(seed_tensor, src=0)
-        synchronized_seed = seed_tensor.item()
-        
-        # Set synchronized seeds for all random number generators
-        torch.manual_seed(synchronized_seed)
-        torch.cuda.manual_seed(synchronized_seed)
-        torch.cuda.manual_seed_all(synchronized_seed)
-        np.random.seed(synchronized_seed)
-        random.seed(synchronized_seed)
+        # Use fixed seed to ensure reproducibility without NCCL communication
+        fixed_seed = 42 + rank  # Slight variation per rank to avoid identical weights
+        torch.manual_seed(fixed_seed)
+        torch.cuda.manual_seed(fixed_seed)
+        torch.cuda.manual_seed_all(fixed_seed)
+        np.random.seed(fixed_seed)
+        random.seed(fixed_seed)
         
         if rank == 0:
-            print(f"🎲 Synchronized random seed across all ranks: {synchronized_seed}")
+            print(f"🎲 Set fixed random seed (avoiding NCCL broadcast): base=42")
         
         return rank, world_size, local_rank
     else:
