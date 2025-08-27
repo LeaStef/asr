@@ -450,6 +450,24 @@ def main():
     # Apply command line arguments
     config, per_gpu_batch_size = apply_args_to_config(config, args, rank, world_size)
     
+    # Verify config consistency across ranks
+    if world_size > 1:
+        vocab_size_tensor = torch.tensor(config.model.vocab_size, dtype=torch.long).cuda()
+        vocab_sizes = [torch.zeros_like(vocab_size_tensor) for _ in range(world_size)]
+        dist.all_gather(vocab_sizes, vocab_size_tensor)
+        
+        if rank == 0:
+            print(f"🔧 Config verification across ranks:")
+            for i, vs in enumerate(vocab_sizes):
+                print(f"   Rank {i}: vocab_size = {vs.item()}")
+            
+            base_vocab_size = vocab_sizes[0].item()
+            for i, vs in enumerate(vocab_sizes[1:], 1):
+                if vs.item() != base_vocab_size:
+                    print(f"❌ CONFIG MISMATCH: Rank {i} vocab_size {vs.item()} != {base_vocab_size}")
+                    raise RuntimeError(f"Configuration mismatch detected across ranks")
+            print(f"✅ Config consistent across all ranks")
+    
     # Print configuration
     print_training_info(config, args, rank, world_size, per_gpu_batch_size)
     
@@ -461,7 +479,24 @@ def main():
     try:
         # Create model and move to GPU
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
-        model = create_model(config.model).to(device)
+        
+        print(f"🔧 Rank {rank}: Creating model with config: vocab_size={config.model.vocab_size}")
+        
+        try:
+            model = create_model(config.model)
+            param_count_before_gpu = sum(p.numel() for p in model.parameters())
+            print(f"✅ Rank {rank}: Model created successfully with {param_count_before_gpu} parameters")
+            
+            model = model.to(device)
+            param_count_after_gpu = sum(p.numel() for p in model.parameters())
+            
+            print(f"✅ Rank {rank}: Model moved to {device}, still has {param_count_after_gpu} parameters")
+                
+        except Exception as e:
+            print(f"❌ Rank {rank}: Model creation failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
         
         # Monitor memory after model creation
         print_memory_usage("After Model Creation", rank, local_rank)
