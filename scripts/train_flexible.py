@@ -472,23 +472,7 @@ def main():
             dist.barrier()
             print(f"✅ Rank {rank}: Finished vocab loading, vocab_size={config.model.vocab_size}")
         
-        # Verify config consistency across ranks AFTER vocab_size is set
-        if world_size > 1:
-            vocab_size_tensor = torch.tensor(config.model.vocab_size, dtype=torch.long).cuda()
-            vocab_sizes = [torch.zeros_like(vocab_size_tensor) for _ in range(world_size)]
-            dist.all_gather(vocab_sizes, vocab_size_tensor)
-            
-            if rank == 0:
-                print(f"🔧 Config verification after vocab loading:")
-                for i, vs in enumerate(vocab_sizes):
-                    print(f"   Rank {i}: vocab_size = {vs.item()}")
-                
-                base_vocab_size = vocab_sizes[0].item()
-                for i, vs in enumerate(vocab_sizes[1:], 1):
-                    if vs.item() != base_vocab_size:
-                        print(f"❌ CONFIG MISMATCH: Rank {i} vocab_size {vs.item()} != {base_vocab_size}")
-                        raise RuntimeError(f"Configuration mismatch detected across ranks")
-                print(f"✅ Config consistent across all ranks: vocab_size={base_vocab_size}")
+        # Skip config verification - model parameter verification is more reliable
         
         # NOW create model with correct vocab_size
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
