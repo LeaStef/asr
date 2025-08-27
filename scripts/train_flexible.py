@@ -125,6 +125,45 @@ def setup_memory_monitoring():
         print("🧹 Cleared CUDA cache and reset memory stats")
 
 
+def verify_model_consistency(model, rank, world_size):
+    """Verify that model parameters are consistent across all ranks"""
+    if world_size == 1:
+        return True
+    
+    # Count parameters
+    param_count = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+    if rank == 0:
+        print(f"🔍 Rank {rank}: Model has {param_count} total parameters ({trainable_params} trainable)")
+    
+    # Create tensors with parameter counts
+    param_tensor = torch.tensor([param_count, trainable_params], dtype=torch.long).cuda()
+    param_tensors = [torch.zeros_like(param_tensor) for _ in range(world_size)]
+    
+    # Gather parameter counts from all ranks
+    dist.all_gather(param_tensors, param_tensor)
+    
+    if rank == 0:
+        print(f"📊 Parameter counts across ranks:")
+        for i, pt in enumerate(param_tensors):
+            total, trainable = pt[0].item(), pt[1].item()
+            print(f"   Rank {i}: {total} total ({trainable} trainable)")
+            
+        # Check consistency
+        base_total, base_trainable = param_tensors[0][0].item(), param_tensors[0][1].item()
+        for i, pt in enumerate(param_tensors[1:], 1):
+            if pt[0].item() != base_total or pt[1].item() != base_trainable:
+                print(f"❌ ERROR: Rank {i} parameter count mismatch!")
+                print(f"   Expected: {base_total} total ({base_trainable} trainable)")
+                print(f"   Got: {pt[0].item()} total ({pt[1].item()} trainable)")
+                return False
+        
+        print(f"✅ Model parameter counts consistent across all ranks")
+    
+    return True
+
+
 def setup_distributed():
     """Setup distributed training for torchrun or single GPU"""
     if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
@@ -139,9 +178,41 @@ def setup_distributed():
         dist.init_process_group(backend=backend)
         torch.cuda.set_device(local_rank)
         
+        # Synchronize random seeds across all processes
+        import random
+        import numpy as np
+        
+        # Use rank 0's random state as the base seed
+        if rank == 0:
+            base_seed = random.randint(0, 2**32 - 1)
+            seed_tensor = torch.tensor(base_seed, dtype=torch.long).cuda()
+        else:
+            seed_tensor = torch.tensor(0, dtype=torch.long).cuda()
+        
+        # Broadcast seed from rank 0 to all ranks
+        dist.broadcast(seed_tensor, src=0)
+        synchronized_seed = seed_tensor.item()
+        
+        # Set synchronized seeds for all random number generators
+        torch.manual_seed(synchronized_seed)
+        torch.cuda.manual_seed(synchronized_seed)
+        torch.cuda.manual_seed_all(synchronized_seed)
+        np.random.seed(synchronized_seed)
+        random.seed(synchronized_seed)
+        
+        if rank == 0:
+            print(f"🎲 Synchronized random seed across all ranks: {synchronized_seed}")
+        
         return rank, world_size, local_rank
     else:
         # Single GPU mode
+        import random
+        import numpy as np
+        base_seed = 42  # Fixed seed for reproducibility
+        torch.manual_seed(base_seed)
+        torch.cuda.manual_seed_all(base_seed)
+        np.random.seed(base_seed)
+        random.seed(base_seed)
         return 0, 1, 0
 
 
@@ -395,8 +466,18 @@ def main():
         # Monitor memory after model creation
         print_memory_usage("After Model Creation", rank, local_rank)
         
-        # Wrap model with DDP if distributed
+        # Verify model consistency before DDP wrapping
         if world_size > 1:
+            # Add barrier to ensure all ranks have created models
+            dist.barrier()
+            
+            # Verify model parameter consistency
+            if not verify_model_consistency(model, rank, world_size):
+                raise RuntimeError(f"Model parameter mismatch detected across ranks")
+            
+            # Add another barrier before DDP wrapping
+            dist.barrier()
+            
             from torch.nn.parallel import DistributedDataParallel as DDP
             model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
             if rank == 0:
