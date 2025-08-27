@@ -459,20 +459,32 @@ def main():
         return 0
     
     try:
+        print(f"🔧 Rank {rank}: Starting dataloader creation...")
+        
         # Create distributed data loaders FIRST to get vocabulary
-        train_loader, val_loader, vocab = create_distributed_dataloaders(
-            config, rank, world_size
-        )
+        try:
+            train_loader, val_loader, vocab = create_distributed_dataloaders(
+                config, rank, world_size
+            )
+            print(f"✅ Rank {rank}: Dataloaders created successfully")
+        except Exception as e:
+            print(f"❌ Rank {rank}: Dataloader creation failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
         
         # Update vocab size in config BEFORE creating model
         config.model.vocab_size = vocab['vocab_size']
+        print(f"🔧 Rank {rank}: Updated vocab_size to {config.model.vocab_size}")
         
         # Add barrier to ensure ALL ranks have finished loading vocabulary
         if world_size > 1:
+            print(f"🔧 Rank {rank}: Waiting at barrier...")
             dist.barrier()
             print(f"✅ Rank {rank}: Finished vocab loading, vocab_size={config.model.vocab_size}")
         
         # Skip config verification - model parameter verification is more reliable
+        print(f"🔧 Rank {rank}: Ready to create model...")
         
         # NOW create model with correct vocab_size
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
