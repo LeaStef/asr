@@ -55,6 +55,17 @@ export NCCL_PROTO=Simple
 
 nvidia-smi
 nvidia-smi topo -m
+nvidia-smi --query-gpu=index,name,memory.total,memory.free,memory.used,utilization.gpu --format=csv
+
+# Monitor memory during training (run in background)
+nvidia-smi --query-gpu=timestamp,index,memory.used,memory.free,utilization.gpu --format=csv -l 30 > gpu_memory_4gpu_log.csv &
+NVIDIA_SMI_PID=$!
+
+# Monitor system memory
+top -b -d 30 -o %MEM | head -20 > system_memory_4gpu_log.txt &
+TOP_PID=$!
+
+echo "Started memory monitoring - GPU log: gpu_memory_4gpu_log.csv, System log: system_memory_4gpu_log.txt"
 
 torchrun --nproc_per_node=4 --master_port=29502 --nnodes=1 --rdzv_backend=c10d scripts/train_flexible.py \
     --batch-size 320 \
@@ -66,6 +77,11 @@ torchrun --nproc_per_node=4 --master_port=29502 --nnodes=1 --rdzv_backend=c10d s
     --output-dir ./outputs_4gpu \
     --dataset gigaspeech \
     --subset m
+
+# Stop memory monitoring
+kill $NVIDIA_SMI_PID 2>/dev/null
+kill $TOP_PID 2>/dev/null
+echo "Training completed - memory logs saved"
 
 # Alternative configurations for different scenarios:
 

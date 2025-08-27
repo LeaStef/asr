@@ -25,6 +25,8 @@ import os
 import sys
 import torch
 import torch.distributed as dist
+import psutil
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -36,6 +38,91 @@ from models.asr_model import create_model
 from data.dataset import create_distributed_dataloaders
 from training.distributed import DistributedTrainer
 from omegaconf import OmegaConf
+
+
+def get_memory_info(device_id=None):
+    """Get comprehensive memory information for GPU and system"""
+    memory_info = {}
+    
+    # GPU Memory
+    if torch.cuda.is_available():
+        if device_id is not None:
+            torch.cuda.set_device(device_id)
+        
+        # Current GPU memory
+        gpu_memory = torch.cuda.memory_stats()
+        memory_info['gpu'] = {
+            'allocated_gb': torch.cuda.memory_allocated() / 1024**3,
+            'reserved_gb': torch.cuda.memory_reserved() / 1024**3,
+            'max_allocated_gb': torch.cuda.max_memory_allocated() / 1024**3,
+            'max_reserved_gb': torch.cuda.max_memory_reserved() / 1024**3,
+            'total_gb': torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / 1024**3
+        }
+        
+        # Calculate utilization
+        memory_info['gpu']['utilization_percent'] = (memory_info['gpu']['allocated_gb'] / memory_info['gpu']['total_gb']) * 100
+    
+    # System Memory
+    memory_info['system'] = {
+        'available_gb': psutil.virtual_memory().available / 1024**3,
+        'used_gb': psutil.virtual_memory().used / 1024**3,
+        'total_gb': psutil.virtual_memory().total / 1024**3,
+        'percent_used': psutil.virtual_memory().percent
+    }
+    
+    return memory_info
+
+
+def print_memory_usage(prefix="", rank=0, device_id=None):
+    """Print formatted memory usage information"""
+    if rank != 0:  # Only print from rank 0 in distributed training
+        return
+    
+    try:
+        mem_info = get_memory_info(device_id)
+        
+        print(f"\n{'='*50}")
+        print(f"🔍 {prefix} Memory Usage")
+        print(f"{'='*50}")
+        
+        # GPU Memory
+        if 'gpu' in mem_info:
+            gpu = mem_info['gpu']
+            print(f"🖥️  GPU Memory:")
+            print(f"   Allocated:  {gpu['allocated_gb']:.2f} GB ({gpu['utilization_percent']:.1f}% of {gpu['total_gb']:.1f} GB)")
+            print(f"   Reserved:   {gpu['reserved_gb']:.2f} GB")
+            print(f"   Peak Alloc: {gpu['max_allocated_gb']:.2f} GB")
+            print(f"   Peak Rsrvd: {gpu['max_reserved_gb']:.2f} GB")
+            
+            # Memory warnings
+            if gpu['utilization_percent'] > 90:
+                print(f"   ⚠️  WARNING: GPU memory usage > 90%")
+            elif gpu['utilization_percent'] > 75:
+                print(f"   ⚠️  CAUTION: GPU memory usage > 75%")
+        
+        # System Memory
+        sys_mem = mem_info['system']
+        print(f"\n🖥️  System Memory:")
+        print(f"   Used:      {sys_mem['used_gb']:.2f} GB ({sys_mem['percent_used']:.1f}%)")
+        print(f"   Available: {sys_mem['available_gb']:.2f} GB")
+        print(f"   Total:     {sys_mem['total_gb']:.2f} GB")
+        
+        if sys_mem['percent_used'] > 90:
+            print(f"   ⚠️  WARNING: System memory usage > 90%")
+        
+        print(f"{'='*50}")
+        
+    except Exception as e:
+        print(f"❌ Error getting memory info: {e}")
+
+
+def setup_memory_monitoring():
+    """Setup memory monitoring and clear cache"""
+    if torch.cuda.is_available():
+        # Clear cache and reset peak memory stats
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        print("🧹 Cleared CUDA cache and reset memory stats")
 
 
 def setup_distributed():
@@ -273,6 +360,10 @@ def main():
     # Setup distributed training
     rank, world_size, local_rank = setup_distributed()
     
+    # Setup memory monitoring
+    setup_memory_monitoring()
+    print_memory_usage("Initial", rank, local_rank)
+    
     # Load base configuration
     try:
         cfg = OmegaConf.load(f'configs/{args.config}.yaml')
@@ -300,6 +391,9 @@ def main():
         # Create model and move to GPU
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
         model = create_model(config.model).to(device)
+        
+        # Monitor memory after model creation
+        print_memory_usage("After Model Creation", rank, local_rank)
         
         # Wrap model with DDP if distributed
         if world_size > 1:

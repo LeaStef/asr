@@ -1,0 +1,162 @@
+[rank1]:[E827 18:21:05.116304600 ProcessGroupNCCL.cpp:616] [Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank3]:[E827 18:21:05.116380780 ProcessGroupNCCL.cpp:616] [Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600001 milliseconds before timing out.
+[rank2]:[E827 18:21:05.116379400 ProcessGroupNCCL.cpp:616] [Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank0]:[E827 18:21:05.116388440 ProcessGroupNCCL.cpp:616] [Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank1]:[E827 18:21:05.117069580 ProcessGroupNCCL.cpp:679] [Rank 1] Work WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) timed out in blocking wait (TORCH_NCCL_BLOCKING_WAIT=1).
+[rank3]:[E827 18:21:05.117162920 ProcessGroupNCCL.cpp:679] [Rank 3] Work WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) timed out in blocking wait (TORCH_NCCL_BLOCKING_WAIT=1).
+[rank2]:[E827 18:21:05.117207510 ProcessGroupNCCL.cpp:679] [Rank 2] Work WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) timed out in blocking wait (TORCH_NCCL_BLOCKING_WAIT=1).
+[rank0]:[E827 18:21:05.117371330 ProcessGroupNCCL.cpp:679] [Rank 0] Work WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) timed out in blocking wait (TORCH_NCCL_BLOCKING_WAIT=1).
+[rank0]:[E827 18:21:06.719871041 ProcessGroupNCCL.cpp:630] [Rank 0] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank0]:[E827 18:21:06.719884861 ProcessGroupNCCL.cpp:636] [Rank 0] To avoid data inconsistency, we are taking the entire process down.
+[rank0]:[E827 18:21:06.719996011 ProcessGroupNCCL.cpp:542] [Rank 0] Collective WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) raised the following async exception: NCCL error: unhandled system error (run with NCCL_DEBUG=INFO for details), NCCL version 2.21.5
+ncclSystemError: System call (e.g. socket, malloc) or external library call failed or device error. 
+Last error:
+
+Exception raised from checkForNCCLErrorsInternal at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2027 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x7faca3eb9446 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libc10.so)
+frame #1: c10d::ProcessGroupNCCL::checkForNCCLErrorsInternal(std::shared_ptr<c10d::NCCLComm>&) + 0x220 (0x7fac55b7de80 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::checkAndSetException() + 0x7c (0x7fac55b7e0cc in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::watchdogHandler() + 0x213 (0x7fac55b85a93 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x7fac55b8751d in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: <unknown function> + 0x145c0 (0x7faca43615c0 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch.so)
+frame #6: <unknown function> + 0x94ac3 (0x7faca50e6ac3 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #7: <unknown function> + 0x126850 (0x7faca5178850 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[E827 18:21:06.722702629 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 0] Exception (either an error or timeout) detected by watchdog at work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.722715029 ProcessGroupNCCL.cpp:1834] [PG ID 0 PG GUID 0(default_pg) Rank 0] Timeout at NCCL work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.722739269 ProcessGroupNCCL.cpp:630] [Rank 0] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 357, in <module>
+[rank0]:     exit_code = main()
+[rank0]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 307, in main
+[rank0]:     model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+[rank0]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 825, in __init__
+[rank0]:     _verify_param_shape_across_processes(self.process_group, parameters)
+[rank0]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/utils.py", line 288, in _verify_param_shape_across_processes
+[rank0]:     return dist._verify_params_across_processes(process_group, tensors, logger)
+[rank0]: torch.distributed.DistBackendError: [Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank3]:[E827 18:21:06.728504094 ProcessGroupNCCL.cpp:630] [Rank 3] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank3]:[E827 18:21:06.728521174 ProcessGroupNCCL.cpp:636] [Rank 3] To avoid data inconsistency, we are taking the entire process down.
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 357, in <module>
+[rank3]:     exit_code = main()
+[rank3]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 307, in main
+[rank3]:     model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+[rank3]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 825, in __init__
+[rank3]:     _verify_param_shape_across_processes(self.process_group, parameters)
+[rank3]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/utils.py", line 288, in _verify_param_shape_across_processes
+[rank3]:     return dist._verify_params_across_processes(process_group, tensors, logger)
+[rank3]: torch.distributed.DistBackendError: [Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600001 milliseconds before timing out.
+[rank3]:[E827 18:21:06.728746574 ProcessGroupNCCL.cpp:542] [Rank 3] Collective WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) raised the following async exception: NCCL error: unhandled system error (run with NCCL_DEBUG=INFO for details), NCCL version 2.21.5
+ncclSystemError: System call (e.g. socket, malloc) or external library call failed or device error. 
+Last error:
+
+Exception raised from checkForNCCLErrorsInternal at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2027 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x7f7e1fab9446 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libc10.so)
+frame #1: c10d::ProcessGroupNCCL::checkForNCCLErrorsInternal(std::shared_ptr<c10d::NCCLComm>&) + 0x220 (0x7f7dd177de80 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::checkAndSetException() + 0x7c (0x7f7dd177e0cc in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::watchdogHandler() + 0x213 (0x7f7dd1785a93 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x7f7dd178751d in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: <unknown function> + 0x145c0 (0x7f7e1ff085c0 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch.so)
+frame #6: <unknown function> + 0x94ac3 (0x7f7e20c8dac3 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #7: <unknown function> + 0x126850 (0x7f7e20d1f850 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[E827 18:21:06.731641751 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 3] Exception (either an error or timeout) detected by watchdog at work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.731654341 ProcessGroupNCCL.cpp:1834] [PG ID 0 PG GUID 0(default_pg) Rank 3] Timeout at NCCL work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.731665361 ProcessGroupNCCL.cpp:630] [Rank 3] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank2]:[E827 18:21:06.934071451 ProcessGroupNCCL.cpp:630] [Rank 2] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank2]:[E827 18:21:06.934086571 ProcessGroupNCCL.cpp:636] [Rank 2] To avoid data inconsistency, we are taking the entire process down.
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 357, in <module>
+[rank2]:     exit_code = main()
+[rank2]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 307, in main
+[rank2]:     model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+[rank2]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 825, in __init__
+[rank2]:     _verify_param_shape_across_processes(self.process_group, parameters)
+[rank2]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/utils.py", line 288, in _verify_param_shape_across_processes
+[rank2]:     return dist._verify_params_across_processes(process_group, tensors, logger)
+[rank2]: torch.distributed.DistBackendError: [Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank2]:[E827 18:21:06.934317680 ProcessGroupNCCL.cpp:542] [Rank 2] Collective WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) raised the following async exception: NCCL error: unhandled system error (run with NCCL_DEBUG=INFO for details), NCCL version 2.21.5
+ncclSystemError: System call (e.g. socket, malloc) or external library call failed or device error. 
+Last error:
+
+Exception raised from checkForNCCLErrorsInternal at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2027 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x7589bbeb9446 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libc10.so)
+frame #1: c10d::ProcessGroupNCCL::checkForNCCLErrorsInternal(std::shared_ptr<c10d::NCCLComm>&) + 0x220 (0x75896db7de80 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::checkAndSetException() + 0x7c (0x75896db7e0cc in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::watchdogHandler() + 0x213 (0x75896db85a93 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x75896db8751d in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: <unknown function> + 0x145c0 (0x7589bc3635c0 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch.so)
+frame #6: <unknown function> + 0x94ac3 (0x7589bd0e8ac3 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #7: <unknown function> + 0x126850 (0x7589bd17a850 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[E827 18:21:06.937157668 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 2] Exception (either an error or timeout) detected by watchdog at work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.937193758 ProcessGroupNCCL.cpp:1834] [PG ID 0 PG GUID 0(default_pg) Rank 2] Timeout at NCCL work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.937205448 ProcessGroupNCCL.cpp:630] [Rank 2] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank1]:[E827 18:21:06.997354020 ProcessGroupNCCL.cpp:630] [Rank 1] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank1]:[E827 18:21:06.997367850 ProcessGroupNCCL.cpp:636] [Rank 1] To avoid data inconsistency, we are taking the entire process down.
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 357, in <module>
+[rank1]:     exit_code = main()
+[rank1]:   File "/u4/h6ly/asr/scripts/train_flexible.py", line 307, in main
+[rank1]:     model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+[rank1]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 825, in __init__
+[rank1]:     _verify_param_shape_across_processes(self.process_group, parameters)
+[rank1]:   File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/utils.py", line 288, in _verify_param_shape_across_processes
+[rank1]:     return dist._verify_params_across_processes(process_group, tensors, logger)
+[rank1]: torch.distributed.DistBackendError: [Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) ran for 600003 milliseconds before timing out.
+[rank1]:[E827 18:21:06.997644230 ProcessGroupNCCL.cpp:542] [Rank 1] Collective WorkNCCL(SeqNum=1, OpType=ALLGATHER, NumelIn=1, NumelOut=4, Timeout(ms)=600000) raised the following async exception: NCCL error: unhandled system error (run with NCCL_DEBUG=INFO for details), NCCL version 2.21.5
+ncclSystemError: System call (e.g. socket, malloc) or external library call failed or device error. 
+Last error:
+
+Exception raised from checkForNCCLErrorsInternal at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2027 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x70d555cb9446 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libc10.so)
+frame #1: c10d::ProcessGroupNCCL::checkForNCCLErrorsInternal(std::shared_ptr<c10d::NCCLComm>&) + 0x220 (0x70d50797de80 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::checkAndSetException() + 0x7c (0x70d50797e0cc in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::watchdogHandler() + 0x213 (0x70d507985a93 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x70d50798751d in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: <unknown function> + 0x145c0 (0x70d5561015c0 in /u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/lib/libtorch.so)
+frame #6: <unknown function> + 0x94ac3 (0x70d556e86ac3 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #7: <unknown function> + 0x126850 (0x70d556f18850 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[E827 18:21:06.000807777 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 1] Exception (either an error or timeout) detected by watchdog at work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.000821477 ProcessGroupNCCL.cpp:1834] [PG ID 0 PG GUID 0(default_pg) Rank 1] Timeout at NCCL work: 1, last enqueued NCCL work: 1, last completed NCCL work: -1.
+[E827 18:21:06.000834017 ProcessGroupNCCL.cpp:630] [Rank 1] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+W0827 18:21:06.722000 254019 torch/distributed/elastic/multiprocessing/api.py:897] Sending process 254037 closing signal SIGTERM
+W0827 18:21:06.724000 254019 torch/distributed/elastic/multiprocessing/api.py:897] Sending process 254038 closing signal SIGTERM
+E0827 18:21:07.003000 254019 torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 254036) of binary: /u4/h6ly/asr/asr/bin/python
+Traceback (most recent call last):
+  File "/u4/h6ly/asr/asr/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/run.py", line 919, in main
+    run(args)
+  File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/run.py", line 910, in run
+    elastic_launch(
+  File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/u4/h6ly/asr/asr/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+scripts/train_flexible.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2025-08-27_18:21:06
+  host      : watgpu608.watgpu-domain.cs.uwaterloo.ca
+  rank      : 3 (local_rank: 3)
+  exitcode  : 1 (pid: 254039)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-08-27_18:21:06
+  host      : watgpu608.watgpu-domain.cs.uwaterloo.ca
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 254036)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

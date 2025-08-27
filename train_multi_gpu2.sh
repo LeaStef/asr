@@ -6,7 +6,6 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:2
 #SBATCH --partition=CELIASMI
-#SBATCH --exclusive
 #SBATCH --hint=nomultithread
 
 # Email notifications (update with your watid)
@@ -21,8 +20,6 @@
 # Performance optimizations for multi-GPU
 export OMP_NUM_THREADS=16
 export MKL_NUM_THREADS=16
-export CUDA_LAUNCH_BLOCKING=0
-export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256,expandable_segments:True
 export TORCH_CUDNN_V8_API_ENABLED=1
 export TORCH_COMPILE_MODE=reduce-overhead
 
@@ -42,19 +39,29 @@ fi
 mkdir -p logs
 
 # Optimized NCCL configuration for performance
-export NCCL_DEBUG=INFO
-export NCCL_DEBUG_SUBSYS=ALL
-export TORCH_DISTRIBUTED_DEBUG=INFO
+export NCCL_DEBUG=WARN
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=0
 export NCCL_SOCKET_IFNAME=lo
+export TORCH_NCCL_BLOCKING_WAIT=1
+export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 
-
-# Check GPU topology
+# Check GPU topology and initial memory
 nvidia-smi topo -m
+nvidia-smi --query-gpu=index,name,memory.total,memory.free,memory.used,utilization.gpu --format=csv
 
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
+
+# Monitor memory during training (run in background)
+nvidia-smi --query-gpu=timestamp,index,memory.used,memory.free,utilization.gpu --format=csv -l 30 > gpu_memory_log.csv &
+NVIDIA_SMI_PID=$!
+
+# Monitor system memory
+top -b -d 30 -o %MEM | head -20 > system_memory_log.txt &
+TOP_PID=$!
+
+echo "Started memory monitoring - GPU log: gpu_memory_log.csv, System log: system_memory_log.txt"
 
 # Optimized multi-GPU training with performance improvements
 torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d scripts/train_flexible.py \
@@ -68,31 +75,7 @@ torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d s
 --mixed-precision \
 --num-workers 32
 
-# For faster testing, use smaller subsets:
-# torchrun --nproc_per_node=2 scripts/train_flexible.py \
-#     --preset rtx6000-2gpu \
-#     --output-dir ./outputs \
-#     --dataset gigaspeech \
-#     --subset xs \
-#     --epochs 5
-
-# For even larger dataset training, use 'l' subset:
-# torchrun --nproc_per_node=2 scripts/train_flexible.py \
-#     --preset rtx6000-2gpu \
-#     --output-dir ./outputs \
-#     --dataset gigaspeech \
-#     --subset l \
-#     --epochs 15
-
-# Alternative: Use the torchrun-specific script
-# torchrun --nproc_per_node=2 scripts/train_torchrun.py
-
-# FALLBACK: If distributed training keeps failing due to NCCL issues:
-# python scripts/train_flexible.py \
-#     --preset rtx6000-1gpu \
-#     --output-dir ./outputs \
-#     --dataset gigaspeech \
-#     --subset m \
-#     --epochs 20 \
-#     --resume /u4/h6ly/asr/outputs/checkpoints/checkpoint_epoch_8.pt
-
+# Stop memory monitoring
+kill $NVIDIA_SMI_PID 2>/dev/null
+kill $TOP_PID 2>/dev/null
+echo "Training completed - memory logs saved"
