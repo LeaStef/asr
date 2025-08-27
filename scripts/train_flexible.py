@@ -450,24 +450,6 @@ def main():
     # Apply command line arguments
     config, per_gpu_batch_size = apply_args_to_config(config, args, rank, world_size)
     
-    # Verify config consistency across ranks
-    if world_size > 1:
-        vocab_size_tensor = torch.tensor(config.model.vocab_size, dtype=torch.long).cuda()
-        vocab_sizes = [torch.zeros_like(vocab_size_tensor) for _ in range(world_size)]
-        dist.all_gather(vocab_sizes, vocab_size_tensor)
-        
-        if rank == 0:
-            print(f"🔧 Config verification across ranks:")
-            for i, vs in enumerate(vocab_sizes):
-                print(f"   Rank {i}: vocab_size = {vs.item()}")
-            
-            base_vocab_size = vocab_sizes[0].item()
-            for i, vs in enumerate(vocab_sizes[1:], 1):
-                if vs.item() != base_vocab_size:
-                    print(f"❌ CONFIG MISMATCH: Rank {i} vocab_size {vs.item()} != {base_vocab_size}")
-                    raise RuntimeError(f"Configuration mismatch detected across ranks")
-            print(f"✅ Config consistent across all ranks")
-    
     # Print configuration
     print_training_info(config, args, rank, world_size, per_gpu_batch_size)
     
@@ -477,10 +459,36 @@ def main():
         return 0
     
     try:
-        # Create model and move to GPU
+        # Create distributed data loaders FIRST to get vocabulary
+        train_loader, val_loader, vocab = create_distributed_dataloaders(
+            config, rank, world_size
+        )
+        
+        # Update vocab size in config BEFORE creating model
+        config.model.vocab_size = vocab['vocab_size']
+        
+        # Verify config consistency across ranks AFTER vocab_size is set
+        if world_size > 1:
+            vocab_size_tensor = torch.tensor(config.model.vocab_size, dtype=torch.long).cuda()
+            vocab_sizes = [torch.zeros_like(vocab_size_tensor) for _ in range(world_size)]
+            dist.all_gather(vocab_sizes, vocab_size_tensor)
+            
+            if rank == 0:
+                print(f"🔧 Config verification after vocab loading:")
+                for i, vs in enumerate(vocab_sizes):
+                    print(f"   Rank {i}: vocab_size = {vs.item()}")
+                
+                base_vocab_size = vocab_sizes[0].item()
+                for i, vs in enumerate(vocab_sizes[1:], 1):
+                    if vs.item() != base_vocab_size:
+                        print(f"❌ CONFIG MISMATCH: Rank {i} vocab_size {vs.item()} != {base_vocab_size}")
+                        raise RuntimeError(f"Configuration mismatch detected across ranks")
+                print(f"✅ Config consistent across all ranks: vocab_size={base_vocab_size}")
+        
+        # NOW create model with correct vocab_size
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
         
-        print(f"🔧 Rank {rank}: Creating model with config: vocab_size={config.model.vocab_size}")
+        print(f"🔧 Rank {rank}: Creating model with correct vocab_size={config.model.vocab_size}")
         
         try:
             model = create_model(config.model)
@@ -517,14 +525,6 @@ def main():
             model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
             if rank == 0:
                 print(f"✅ Model wrapped with DDP")
-        
-        # Create distributed data loaders
-        train_loader, val_loader, vocab = create_distributed_dataloaders(
-            config, rank, world_size
-        )
-        
-        # Update vocab size in config
-        config.model.vocab_size = vocab['vocab_size']
         
         # Create distributed trainer
         trainer = DistributedTrainer(
