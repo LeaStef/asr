@@ -297,7 +297,15 @@ def main():
         return 0
     
     try:
-        # Create model and move to GPU
+        # Create distributed data loaders FIRST to get vocabulary
+        train_loader, val_loader, vocab = create_distributed_dataloaders(
+            config, rank, world_size
+        )
+        
+        # Update vocab size in config BEFORE creating model
+        config.model.vocab_size = vocab['vocab_size']
+        
+        # Create model with correct vocab size and move to GPU
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
         model = create_model(config.model).to(device)
         
@@ -307,14 +315,6 @@ def main():
             model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
             if rank == 0:
                 print(f"✅ Model wrapped with DDP")
-        
-        # Create distributed data loaders
-        train_loader, val_loader, vocab = create_distributed_dataloaders(
-            config, rank, world_size
-        )
-        
-        # Update vocab size in config
-        config.model.vocab_size = vocab['vocab_size']
         
         # Create distributed trainer
         trainer = DistributedTrainer(
