@@ -178,17 +178,21 @@ def setup_distributed():
         dist.init_process_group(backend=backend)
         torch.cuda.set_device(local_rank)
         
-        # Set fixed random seed across all ranks (avoid NCCL broadcast issues)
+        # Set IDENTICAL random seed across all ranks to ensure identical model initialization
         import random
         import numpy as np
         
-        # Use fixed seed to ensure reproducibility without NCCL communication
-        fixed_seed = 42 + rank  # Slight variation per rank to avoid identical weights
+        # Use SAME seed across all ranks to ensure identical model parameters
+        fixed_seed = 42  # Same seed for all ranks
         torch.manual_seed(fixed_seed)
         torch.cuda.manual_seed(fixed_seed)
         torch.cuda.manual_seed_all(fixed_seed)
         np.random.seed(fixed_seed)
         random.seed(fixed_seed)
+        
+        # Ensure deterministic operations
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
         
         if rank == 0:
             print(f"🎲 Set fixed random seed (avoiding NCCL broadcast): base=42")
@@ -507,11 +511,22 @@ def main():
             
             # Ensure model is properly initialized before DDP
             param_count = sum(p.numel() for p in model.parameters())
-            print(f"✅ Rank {rank}: Model has {param_count:,} parameters before DDP wrapping")
+            trainable_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            print(f"✅ Rank {rank}: Model has {param_count:,} total ({trainable_count:,} trainable) parameters before DDP wrapping")
+            
+            # Verify model architecture is identical
+            model_state = {
+                'vocab_size': getattr(model, 'vocab_size', None),
+                'hidden_size': getattr(model, 'hidden_size', None),
+                'num_layers': getattr(model, 'num_layers', None),
+                'param_count': param_count,
+                'trainable_count': trainable_count
+            }
+            print(f"🔍 Rank {rank}: Model config: {model_state}")
             
             # Brief delay to ensure all ranks are synchronized
             import time
-            time.sleep(1)
+            time.sleep(2)
             
             from torch.nn.parallel import DistributedDataParallel as DDP
             # Add broadcast_buffers=False to reduce NCCL communication during init
