@@ -25,8 +25,6 @@ import os
 import sys
 import torch
 import torch.distributed as dist
-import psutil
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -38,130 +36,6 @@ from models.asr_model import create_model
 from data.dataset import create_distributed_dataloaders
 from training.distributed import DistributedTrainer
 from omegaconf import OmegaConf
-
-
-def get_memory_info(device_id=None):
-    """Get comprehensive memory information for GPU and system"""
-    memory_info = {}
-    
-    # GPU Memory
-    if torch.cuda.is_available():
-        if device_id is not None:
-            torch.cuda.set_device(device_id)
-        
-        # Current GPU memory
-        gpu_memory = torch.cuda.memory_stats()
-        memory_info['gpu'] = {
-            'allocated_gb': torch.cuda.memory_allocated() / 1024**3,
-            'reserved_gb': torch.cuda.memory_reserved() / 1024**3,
-            'max_allocated_gb': torch.cuda.max_memory_allocated() / 1024**3,
-            'max_reserved_gb': torch.cuda.max_memory_reserved() / 1024**3,
-            'total_gb': torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / 1024**3
-        }
-        
-        # Calculate utilization
-        memory_info['gpu']['utilization_percent'] = (memory_info['gpu']['allocated_gb'] / memory_info['gpu']['total_gb']) * 100
-    
-    # System Memory
-    memory_info['system'] = {
-        'available_gb': psutil.virtual_memory().available / 1024**3,
-        'used_gb': psutil.virtual_memory().used / 1024**3,
-        'total_gb': psutil.virtual_memory().total / 1024**3,
-        'percent_used': psutil.virtual_memory().percent
-    }
-    
-    return memory_info
-
-
-def print_memory_usage(prefix="", rank=0, device_id=None):
-    """Print formatted memory usage information"""
-    if rank != 0:  # Only print from rank 0 in distributed training
-        return
-    
-    try:
-        mem_info = get_memory_info(device_id)
-        
-        print(f"\n{'='*50}")
-        print(f"🔍 {prefix} Memory Usage")
-        print(f"{'='*50}")
-        
-        # GPU Memory
-        if 'gpu' in mem_info:
-            gpu = mem_info['gpu']
-            print(f"🖥️  GPU Memory:")
-            print(f"   Allocated:  {gpu['allocated_gb']:.2f} GB ({gpu['utilization_percent']:.1f}% of {gpu['total_gb']:.1f} GB)")
-            print(f"   Reserved:   {gpu['reserved_gb']:.2f} GB")
-            print(f"   Peak Alloc: {gpu['max_allocated_gb']:.2f} GB")
-            print(f"   Peak Rsrvd: {gpu['max_reserved_gb']:.2f} GB")
-            
-            # Memory warnings
-            if gpu['utilization_percent'] > 90:
-                print(f"   ⚠️  WARNING: GPU memory usage > 90%")
-            elif gpu['utilization_percent'] > 75:
-                print(f"   ⚠️  CAUTION: GPU memory usage > 75%")
-        
-        # System Memory
-        sys_mem = mem_info['system']
-        print(f"\n🖥️  System Memory:")
-        print(f"   Used:      {sys_mem['used_gb']:.2f} GB ({sys_mem['percent_used']:.1f}%)")
-        print(f"   Available: {sys_mem['available_gb']:.2f} GB")
-        print(f"   Total:     {sys_mem['total_gb']:.2f} GB")
-        
-        if sys_mem['percent_used'] > 90:
-            print(f"   ⚠️  WARNING: System memory usage > 90%")
-        
-        print(f"{'='*50}")
-        
-    except Exception as e:
-        print(f"❌ Error getting memory info: {e}")
-
-
-def setup_memory_monitoring():
-    """Setup memory monitoring and clear cache"""
-    if torch.cuda.is_available():
-        # Clear cache and reset peak memory stats
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats()
-        print("🧹 Cleared CUDA cache and reset memory stats")
-
-
-def verify_model_consistency(model, rank, world_size):
-    """Verify that model parameters are consistent across all ranks"""
-    if world_size == 1:
-        return True
-    
-    # Count parameters
-    param_count = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    
-    if rank == 0:
-        print(f"🔍 Rank {rank}: Model has {param_count} total parameters ({trainable_params} trainable)")
-    
-    # Create tensors with parameter counts
-    param_tensor = torch.tensor([param_count, trainable_params], dtype=torch.long).cuda()
-    param_tensors = [torch.zeros_like(param_tensor) for _ in range(world_size)]
-    
-    # Gather parameter counts from all ranks
-    dist.all_gather(param_tensors, param_tensor)
-    
-    if rank == 0:
-        print(f"📊 Parameter counts across ranks:")
-        for i, pt in enumerate(param_tensors):
-            total, trainable = pt[0].item(), pt[1].item()
-            print(f"   Rank {i}: {total} total ({trainable} trainable)")
-            
-        # Check consistency
-        base_total, base_trainable = param_tensors[0][0].item(), param_tensors[0][1].item()
-        for i, pt in enumerate(param_tensors[1:], 1):
-            if pt[0].item() != base_total or pt[1].item() != base_trainable:
-                print(f"❌ ERROR: Rank {i} parameter count mismatch!")
-                print(f"   Expected: {base_total} total ({base_trainable} trainable)")
-                print(f"   Got: {pt[0].item()} total ({pt[1].item()} trainable)")
-                return False
-        
-        print(f"✅ Model parameter counts consistent across all ranks")
-    
-    return True
 
 
 def setup_distributed():
@@ -178,35 +52,9 @@ def setup_distributed():
         dist.init_process_group(backend=backend)
         torch.cuda.set_device(local_rank)
         
-        # Set IDENTICAL random seed across all ranks to ensure identical model initialization
-        import random
-        import numpy as np
-        
-        # Use SAME seed across all ranks to ensure identical model parameters
-        fixed_seed = 42  # Same seed for all ranks
-        torch.manual_seed(fixed_seed)
-        torch.cuda.manual_seed(fixed_seed)
-        torch.cuda.manual_seed_all(fixed_seed)
-        np.random.seed(fixed_seed)
-        random.seed(fixed_seed)
-        
-        # Ensure deterministic operations
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        
-        if rank == 0:
-            print(f"🎲 Set fixed random seed (avoiding NCCL broadcast): base=42")
-        
         return rank, world_size, local_rank
     else:
         # Single GPU mode
-        import random
-        import numpy as np
-        base_seed = 42  # Fixed seed for reproducibility
-        torch.manual_seed(base_seed)
-        torch.cuda.manual_seed_all(base_seed)
-        np.random.seed(base_seed)
-        random.seed(base_seed)
         return 0, 1, 0
 
 
@@ -425,10 +273,6 @@ def main():
     # Setup distributed training
     rank, world_size, local_rank = setup_distributed()
     
-    # Setup memory monitoring
-    setup_memory_monitoring()
-    print_memory_usage("Initial", rank, local_rank)
-    
     # Load base configuration
     try:
         cfg = OmegaConf.load(f'configs/{args.config}.yaml')
@@ -453,86 +297,24 @@ def main():
         return 0
     
     try:
-        print(f"🔧 Rank {rank}: Starting dataloader creation...")
-        
-        # Create distributed data loaders FIRST to get vocabulary
-        try:
-            train_loader, val_loader, vocab = create_distributed_dataloaders(
-                config, rank, world_size
-            )
-            print(f"✅ Rank {rank}: Dataloaders created successfully")
-        except Exception as e:
-            print(f"❌ Rank {rank}: Dataloader creation failed: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise
-        
-        # Update vocab size in config BEFORE creating model
-        config.model.vocab_size = vocab['vocab_size']
-        print(f"🔧 Rank {rank}: Updated vocab_size to {config.model.vocab_size}")
-        
-        # Skip barrier due to NCCL hardware issues on watgpu608
-        if world_size > 1:
-            print(f"✅ Rank {rank}: Finished vocab loading, vocab_size={config.model.vocab_size}")
-        else:
-            print(f"✅ Rank {rank}: Finished vocab loading, vocab_size={config.model.vocab_size}")
-        
-        # Skip config verification - model parameter verification is more reliable
-        print(f"🔧 Rank {rank}: Ready to create model...")
-        
-        # NOW create model with correct vocab_size
+        # Create model and move to GPU
         device = torch.device(f'cuda:{local_rank}' if torch.cuda.is_available() else 'cpu')
+        model = create_model(config.model).to(device)
         
-        print(f"🔧 Rank {rank}: Creating model with correct vocab_size={config.model.vocab_size}")
-        
-        try:
-            model = create_model(config.model)
-            param_count_before_gpu = sum(p.numel() for p in model.parameters())
-            print(f"✅ Rank {rank}: Model created successfully with {param_count_before_gpu} parameters")
-            
-            model = model.to(device)
-            param_count_after_gpu = sum(p.numel() for p in model.parameters())
-            
-            print(f"✅ Rank {rank}: Model moved to {device}, still has {param_count_after_gpu} parameters")
-                
-        except Exception as e:
-            print(f"❌ Rank {rank}: Model creation failed: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise
-        
-        # Monitor memory after model creation
-        print_memory_usage("After Model Creation", rank, local_rank)
-        
-        # Verify model consistency before DDP wrapping
+        # Wrap model with DDP if distributed
         if world_size > 1:
-            # Skip barriers due to NCCL hardware issues - rely on model creation success
-            print(f"🔧 Rank {rank}: Proceeding to DDP wrapping...")
-            
-            # Ensure model is properly initialized before DDP
-            param_count = sum(p.numel() for p in model.parameters())
-            trainable_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            print(f"✅ Rank {rank}: Model has {param_count:,} total ({trainable_count:,} trainable) parameters before DDP wrapping")
-            
-            # Verify model architecture is identical
-            model_state = {
-                'vocab_size': getattr(model, 'vocab_size', None),
-                'hidden_size': getattr(model, 'hidden_size', None),
-                'num_layers': getattr(model, 'num_layers', None),
-                'param_count': param_count,
-                'trainable_count': trainable_count
-            }
-            print(f"🔍 Rank {rank}: Model config: {model_state}")
-            
-            # Brief delay to ensure all ranks are synchronized
-            import time
-            time.sleep(2)
-            
             from torch.nn.parallel import DistributedDataParallel as DDP
-            # Add broadcast_buffers=False to reduce NCCL communication during init
-            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False, broadcast_buffers=False)
+            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
             if rank == 0:
                 print(f"✅ Model wrapped with DDP")
+        
+        # Create distributed data loaders
+        train_loader, val_loader, vocab = create_distributed_dataloaders(
+            config, rank, world_size
+        )
+        
+        # Update vocab size in config
+        config.model.vocab_size = vocab['vocab_size']
         
         # Create distributed trainer
         trainer = DistributedTrainer(
