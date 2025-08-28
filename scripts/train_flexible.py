@@ -505,11 +505,17 @@ def main():
             # Skip barriers due to NCCL hardware issues - rely on model creation success
             print(f"🔧 Rank {rank}: Proceeding to DDP wrapping...")
             
-            # Skip model parameter verification to avoid NCCL issues
-            print(f"✅ Rank {rank}: Model created successfully with {model.get_num_params():,} parameters")
+            # Ensure model is properly initialized before DDP
+            param_count = sum(p.numel() for p in model.parameters())
+            print(f"✅ Rank {rank}: Model has {param_count:,} parameters before DDP wrapping")
+            
+            # Brief delay to ensure all ranks are synchronized
+            import time
+            time.sleep(1)
             
             from torch.nn.parallel import DistributedDataParallel as DDP
-            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+            # Add broadcast_buffers=False to reduce NCCL communication during init
+            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False, broadcast_buffers=False)
             if rank == 0:
                 print(f"✅ Model wrapped with DDP")
         
