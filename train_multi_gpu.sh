@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=lmu-asr-2-gpu
-#SBATCH --time=168:00:00
+#SBATCH --job-name=lmu-asr-multi-gpu-optimized
+#SBATCH --time=48:00:00
 #SBATCH --mem=256GB
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:2
@@ -18,7 +18,7 @@
 #SBATCH -e JOB%j-err.out
 
 
-# Performance optimizations for multi-GPU (restored from working version)
+# Performance optimizations for multi-GPU
 export OMP_NUM_THREADS=16
 export MKL_NUM_THREADS=16
 export CUDA_LAUNCH_BLOCKING=0
@@ -41,15 +41,13 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# Optimized NCCL configuration for performance (restored from working version)
+# Optimized NCCL configuration for performance
 export NCCL_DEBUG=WARN
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=0
 export NCCL_SOCKET_IFNAME=lo
 export NCCL_BLOCKING_WAIT=1
 export NCCL_ASYNC_ERROR_HANDLING=1
-
-
 
 # Check GPU topology
 nvidia-smi topo -m
@@ -64,8 +62,9 @@ torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d s
 --dataset gigaspeech \
 --subset m \
 --epochs 50 \
---lr 2.5e-4 \
+--lr 2.5e-3 \
 --batch-size 96 \
+--gradient-clip 1.0 \
 --mixed-precision \
 --num-workers 32
 
