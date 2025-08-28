@@ -312,9 +312,11 @@ def main():
         # Wrap model with DDP if distributed
         if world_size > 1:
             from torch.nn.parallel import DistributedDataParallel as DDP
-            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False)
+            # Disable broadcast_buffers to avoid large NCCL operations during init
+            model = DDP(model, device_ids=[local_rank], find_unused_parameters=False, 
+                       broadcast_buffers=False)
             if rank == 0:
-                print(f"✅ Model wrapped with DDP")
+                print(f"✅ Model wrapped with DDP (broadcast_buffers=False)")
         
         # Create distributed trainer
         trainer = DistributedTrainer(
