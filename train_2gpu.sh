@@ -46,6 +46,9 @@ export NCCL_SOCKET_IFNAME=lo
 # Reduce NCCL timeout from 600s (10min) to 120s (2min) for faster feedback
 export NCCL_TIMEOUT=120
 
+# Disable PyTorch's DDP parameter shape verification to bypass hardware issues
+export TORCH_DISTRIBUTED_DDP_PARAM_VERIFY=0
+
 
 # Check GPU topology
 nvidia-smi topo -m
