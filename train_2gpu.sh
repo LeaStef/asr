@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=lmu-asr-multi-gpu-optimized
+#SBATCH --job-name=lmu-asr-2-gpu
 #SBATCH --time=168:00:00
 #SBATCH --mem=256GB
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:2
 #SBATCH --partition=CELIASMI
-#SBATCH --hint=nomultithread
 
 # Email notifications (update with your watid)
 #SBATCH --mail-user=h6ly@uwaterloo.ca
@@ -17,13 +16,9 @@
 #SBATCH -e JOB%j-err.out
 
 
-# Performance optimizations for multi-GPU
+# Basic environment setup
 export OMP_NUM_THREADS=16
 export MKL_NUM_THREADS=16
-export CUDA_LAUNCH_BLOCKING=0
-export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256,expandable_segments:True
-export TORCH_CUDNN_V8_API_ENABLED=1
-export TORCH_COMPILE_MODE=reduce-overhead
 
 # Set up environment
 log_dir=$HOME/asr
@@ -63,9 +58,9 @@ torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d s
 --subset m \
 --epochs 50 \
 --lr 2.5e-4 \
---batch-size 96 \
+--batch-size 32 \
 --mixed-precision \
---num-workers 32
+--num-workers 16
 
 # For faster testing, use smaller subsets:
 # torchrun --nproc_per_node=2 scripts/train_flexible.py \
