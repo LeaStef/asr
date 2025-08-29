@@ -392,7 +392,7 @@ class DistributedTrainer:
             vocab: Vocabulary dictionary
         """
         if is_main_process():
-            print(f"Starting distributed training for {self.training_config.max_epochs} epochs...")
+            print(f"🎯 Starting distributed training for {self.training_config.max_epochs} epochs...")
             print(f"Training on {len(train_loader.dataset)} samples")
             print(f"Validating on {len(val_loader.dataset)} samples")
             print(f"Using {self.world_size} GPUs")
@@ -403,7 +403,7 @@ class DistributedTrainer:
             
             # Training
             if is_main_process():
-                print(f"\nEpoch {epoch + 1}/{self.training_config.max_epochs}")
+                print(f"\n🚀 Epoch {epoch + 1}/{self.training_config.max_epochs} ({((epoch + 1) / self.training_config.max_epochs * 100):.1f}%)")
             
             train_loss = self.train_epoch(train_loader, vocab)
             
@@ -428,7 +428,7 @@ class DistributedTrainer:
                 model_stats = get_model_stats(self.model, input_shape)
                 
                 # Print epoch summary
-                print(f"Epoch {epoch + 1} Summary:")
+                print(f"📊 Epoch {epoch + 1}/{self.training_config.max_epochs} Summary:")
                 print(f"  Train Loss: {train_loss:.4f}")
                 print(f"  Val Loss: {val_loss:.4f}")
                 print(f"  Val WER: {val_wer:.4f}")
@@ -455,31 +455,30 @@ class DistributedTrainer:
                 if 'total_memory_estimate_mb' in model_stats:
                     print(f"  Est. Training Memory: {model_stats['total_memory_estimate_mb']:.1f} MB")
                 
-                # Print detailed torchinfo summary on first epoch
+                # Print concise torchinfo summary on first epoch
                 if epoch == 0 and 'torchinfo_summary' in model_stats:
-                    print(f"\n📋 Detailed Model Architecture (torchinfo):")
-                    print(model_stats['torchinfo_summary'])
-                    
-                    # Print layer breakdown if available
+                    print(f"\n📋 Model Architecture Summary:")
+                    # Show only key metrics instead of full torchinfo output
                     if 'layer_breakdown' in model_stats:
-                        print(f"\n📊 Top Parameter-Heavy Layers:")
                         layer_breakdown = model_stats['layer_breakdown']
-                        # Sort by parameter count and show top 5
+                        # Show top 3 parameter-heavy layers only
                         sorted_layers = sorted(
                             layer_breakdown.items(),
                             key=lambda x: x[1]['params'],
                             reverse=True
-                        )[:5]
+                        )[:3]
                         for layer_name, info in sorted_layers:
                             if info['params'] > 0:
-                                print(f"  {layer_name}: {info['params']:,} params, {info['flops']:,} FLOPs")
+                                print(f"  {layer_name}: {info['params']:,} params")
+                    else:
+                        # Fallback: show just basic model info without full torchinfo details
+                        print("  Model successfully initialized with torchinfo")
                 
                 # Show fallback info if main torchinfo failed
                 if epoch == 0 and 'torchinfo_error' in model_stats:
                     print(f"\n⚠️  torchinfo error: {model_stats['torchinfo_error']}")
                     if 'torchinfo_fallback' in model_stats:
-                        print("📋 Basic Model Summary (fallback):")
-                        print(model_stats['torchinfo_fallback'])
+                        print("📋 Basic Model Summary (fallback available but suppressed for brevity)")
             
             # Save checkpoint (only on main process)
             if is_main_process():

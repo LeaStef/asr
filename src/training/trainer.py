@@ -251,7 +251,7 @@ class Trainer:
             val_loader: Validation data loader
             vocab: Vocabulary dictionary
         """
-        print(f"Starting training for {self.config.max_epochs} epochs...")
+        print(f"🎯 Starting training for {self.config.max_epochs} epochs...")
         print(f"Training on {len(train_loader.dataset)} samples")
         print(f"Validating on {len(val_loader.dataset)} samples")
         
@@ -260,7 +260,7 @@ class Trainer:
             start_time = time.time()
             
             # Training
-            print(f"\nEpoch {epoch + 1}/{self.config.max_epochs}")
+            print(f"\n🚀 Epoch {epoch + 1}/{self.config.max_epochs} ({((epoch + 1) / self.config.max_epochs * 100):.1f}%)")
             train_loss = self.train_epoch(train_loader, vocab)
             
             # Validation
@@ -277,7 +277,7 @@ class Trainer:
             )
             
             # Print epoch summary
-            print(f"Epoch {epoch + 1} Summary:")
+            print(f"📊 Epoch {epoch + 1}/{self.config.max_epochs} Summary:")
             print(f"  Train Loss: {train_loss:.4f}")
             print(f"  Val Loss: {val_loss:.4f}")
             print(f"  Val WER: {val_wer:.4f}")
