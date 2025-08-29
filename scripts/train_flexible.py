@@ -12,9 +12,9 @@ Usage Examples:
     # Multi-GPU with custom batch size
     torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128
     
-    # L40S GPU optimization
-    python scripts/train_flexible.py --batch-size 64 --lr 4e-3 --preset l40s-1gpu
-    torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128 --lr 8e-3 --preset l40s-2gpu
+    # Performance optimization
+    python scripts/train_flexible.py --batch-size 64 --lr 4e-3 --preset performance
+    torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 128 --lr 8e-3 --preset performance
     
     # Full customization
     python scripts/train_flexible.py --batch-size 32 --lr 2e-3 --epochs 10 --mixed-precision
@@ -59,55 +59,27 @@ def setup_distributed():
 
 
 def get_preset_config(preset: str) -> dict:
-    """Get preset configurations for different GPU setups"""
+    """Get preset configurations for training"""
     presets = {
-        'l40s-1gpu': {
-            'batch_size': 64,
-            'lr': 4e-3,
-            'epochs': 35,
-            'num_workers': 6,
-            'mixed_precision': True,
-        },
-        'l40s-2gpu': {
-            'batch_size': 128,
-            'lr': 8e-3,
-            'epochs': 25,
-            'num_workers': 8,
-            'mixed_precision': True,
-        },
-        'a100-1gpu': {
-            'batch_size': 48,
-            'lr': 3e-3,
-            'epochs': 40,
-            'num_workers': 6,
-            'mixed_precision': True,
-        },
-        'a100-2gpu': {
-            'batch_size': 96,
-            'lr': 6e-3,
-            'epochs': 30,
-            'num_workers': 8,
-            'mixed_precision': True,
-        },
-        'rtx6000-1gpu': {
-            'batch_size': 24,  # Conservative batch size for stability
-            'lr': 1e-4,        # Conservative learning rate to prevent NaN
-            'epochs': 30,
-            'num_workers': 12,
-            'mixed_precision': False,  # Disable to prevent numerical issues
-        },
-        'rtx6000-2gpu': {
-            'batch_size': 32,  # Much more conservative batch size
-            'lr': 1e-4,        # Conservative learning rate to prevent NaN
-            'epochs': 25,
-            'num_workers': 16,
-            'mixed_precision': False,  # Disable to prevent numerical issues
-        },
         'default': {
             'batch_size': 16,
             'lr': 1e-3,
             'epochs': 50,
             'num_workers': 4,
+            'mixed_precision': True,
+        },
+        'conservative': {
+            'batch_size': 24,
+            'lr': 1e-4,
+            'epochs': 30,
+            'num_workers': 8,
+            'mixed_precision': False,
+        },
+        'performance': {
+            'batch_size': 64,
+            'lr': 4e-3,
+            'epochs': 35,
+            'num_workers': 8,
             'mixed_precision': True,
         }
     }
@@ -131,9 +103,9 @@ def parse_args():
     parser.add_argument('--epochs', '-e', type=int, default=None,
                         help='Number of training epochs (default: use config)')
     
-    # GPU optimization presets
-    parser.add_argument('--preset', choices=['l40s-1gpu', 'l40s-2gpu', 'a100-1gpu', 'a100-2gpu', 'rtx6000-1gpu', 'rtx6000-2gpu', 'default'], default='default',
-                        help='Use optimized preset for specific GPU configuration')
+    # Training presets
+    parser.add_argument('--preset', choices=['default', 'conservative', 'performance'], default='default',
+                        help='Use preset configuration for training')
     
     # Training options
     parser.add_argument('--mixed-precision', action='store_true', default=None,
@@ -258,10 +230,10 @@ def print_training_info(config, args, rank, world_size, per_gpu_batch_size):
             print(f"\n🎯 Using preset: {args.preset}")
             
         # Memory estimation
-        if world_size == 2 and per_gpu_batch_size >= 64:
-            print(f"\n💾 Memory: Optimized for L40S GPUs (expected ~75% usage)")
-        elif per_gpu_batch_size >= 32:
+        if per_gpu_batch_size >= 64:
             print(f"\n💾 Memory: High batch size detected (monitor GPU memory)")
+        elif per_gpu_batch_size >= 32:
+            print(f"\n💾 Memory: Moderate batch size (good for most GPUs)")
             
         print("="*60)
 

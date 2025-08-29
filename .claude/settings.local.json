@@ -19,7 +19,8 @@
       "Bash(mv:*)",
       "Bash(scp:*)",
       "Bash(grep:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(ssh:*)"
     ],
     "deny": []
   }
