@@ -40,10 +40,6 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# Load required modules (match working YOLOv5 setup)
-module load cuda/11.8
-module load python/3.9
-
 # NCCL configuration (match working YOLOv5 setup)
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
