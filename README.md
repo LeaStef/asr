@@ -41,11 +41,15 @@ python pytorch-test-setup.py
 # Single GPU optimized training
 sbatch train_single_gpu.sh
 
-# Multi-GPU distributed training
-sbatch train_multi_gpu.sh
+# 2-GPU distributed training
+sbatch train_2gpu.sh
 
-# Interactive training with custom parameters
-python scripts/train_flexible.py --batch-size 48 --preset default --mixed-precision
+# Large-scale training with monitoring (4 GPUs)
+sbatch train_4gpu.sh
+
+# Interactive training with presets
+python scripts/train_flexible.py --preset performance --mixed-precision
+python scripts/train_flexible.py --preset conservative --epochs 30
 ```
 
 ## Architecture
@@ -80,28 +84,45 @@ python scripts/train_flexible.py --batch-size 48 --preset default --mixed-precis
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `train_single_gpu.sh` | Optimized single GPU SLURM | Production single GPU |
-| `train_multi_gpu.sh` | Optimized multi-GPU SLURM | Production distributed |
+| `train_2gpu.sh` | 2-GPU SLURM distributed | Production 2-GPU training |
+| `train_4gpu.sh` | 4-GPU SLURM with monitoring | Large-scale training |
 | `train_flexible.py` | Interactive with presets | Development & tuning |
 
 ### SLURM Optimizations
-- **Resource allocation**: Exclusive nodes, optimized CPU/memory ratios
-- **Performance tuning**: CUDA optimizations, memory management
-- **Monitoring**: Built-in GPU utilization and training progress tracking
+- **Resource allocation**: Optimized CPU/memory ratios, proper GPU topology
+- **NCCL configuration**: Fixed P2P communication issues, enhanced debugging
+- **Performance tuning**: CUDA optimizations, memory management, module loading
+- **Monitoring**: Built-in GPU utilization tracking (train_4gpu.sh), progress indicators
+- **Cluster compatibility**: Aligned with proven YOLOv5 multi-GPU configuration
 
 ## Configuration
 
-### Optimized Training Configurations
+### Training Presets
+
+The training system now uses generic presets instead of GPU-specific configurations:
 
 ```bash
-# Single GPU (optimized for RTX 6000/4090)
-python scripts/train_flexible.py --batch-size 48 --lr 1.5e-3 --mixed-precision
+# Available presets
+--preset default      # Balanced settings (batch_size=16, lr=1e-3, mixed_precision=True)
+--preset conservative # Lower resource usage (batch_size=24, lr=1e-4, mixed_precision=False)
+--preset performance  # Higher throughput (batch_size=64, lr=4e-3, mixed_precision=True)
 
-# Multi-GPU distributed (2 GPUs)
-torchrun --nproc_per_node=2 scripts/train_flexible.py --batch-size 96 --lr 2.5e-3
+# Examples
+python scripts/train_flexible.py --preset performance --epochs 35
+torchrun --nproc_per_node=2 scripts/train_flexible.py --preset default --batch-size 96
+```
 
-# Production SLURM training
-sbatch train_single_gpu.sh  # 48 batch size, 16 workers
-sbatch train_multi_gpu.sh   # 96 batch size, 32 workers
+### Production SLURM Training
+
+```bash
+# Single GPU training
+sbatch train_single_gpu.sh
+
+# 2-GPU training
+sbatch train_2gpu.sh
+
+# Large-scale training (4 GPUs with monitoring)
+sbatch train_4gpu.sh
 ```
 
 ### Custom Configuration
@@ -165,6 +186,7 @@ Files saved as:
 - **WER Performance**: Corrected CTC bias enables proper learning (resolves 100% WER issue)
 - **Multi-GPU**: Near-linear speedup with NCCL-optimized distributed training
 - **Memory Efficiency**: 25% better GPU utilization with mixed precision and compilation
+- **Cluster Stability**: Resolved terminal freezing and communication issues through proven NCCL configuration
 
 ## Development
 
@@ -192,7 +214,11 @@ python pytorch-test-setup.py
 python scripts/train_flexible.py --dry-run
 
 # Debug mode (single epoch)
-python scripts/train_flexible.py --debug --batch-size 16
+python scripts/train_flexible.py --debug --preset conservative
+
+# Test different presets
+python scripts/train_flexible.py --preset default --dry-run
+python scripts/train_flexible.py --preset performance --dry-run
 
 # Debug scripts for troubleshooting
 python scripts/debug_validation_data.py  # Check data pipeline
