@@ -40,15 +40,17 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# NCCL configuration with enhanced debugging
+# Load required modules (match working YOLOv5 setup)
+module load cuda/11.8
+module load python/3.9
+
+# NCCL configuration (match working YOLOv5 setup)
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
 export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_IB_DISABLE=1
-export NCCL_P2P_DISABLE=0
+export NCCL_P2P_DISABLE=1
 export NCCL_SOCKET_IFNAME=lo
-export TORCH_NCCL_BLOCKING_WAIT=1
-export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 
 
 
@@ -58,8 +60,8 @@ nvidia-smi topo -m
 # Multi-GPU training with torchrun
 # Optimized for GigaSpeech 'm' subset (~1000 hours, ~200k samples)
 
-# Optimized multi-GPU training with performance improvements
-torchrun --nproc_per_node=2 --master_port=29501 --nnodes=1 --rdzv_backend=c10d scripts/train_flexible.py \
+# Multi-GPU training (simplified like working YOLOv5)
+torchrun --nproc_per_node=2 --master_port=29501 scripts/train_flexible.py \
 --preset default \
 --output-dir ./outputs_optimized_mgpu \
 --dataset gigaspeech \

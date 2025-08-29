@@ -20,7 +20,8 @@
       "Bash(scp:*)",
       "Bash(grep:*)",
       "Bash(git checkout:*)",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Read(//home/ctnuser/yolov5/**)"
     ],
     "deny": []
   }
