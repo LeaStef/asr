@@ -93,7 +93,6 @@ python scripts/train_flexible.py --preset conservative --epochs 30
 - **NCCL configuration**: Fixed P2P communication issues, enhanced debugging
 - **Performance tuning**: CUDA optimizations, memory management, module loading
 - **Monitoring**: Built-in GPU utilization tracking (train_4gpu.sh), progress indicators
-- **Cluster compatibility**: Aligned with proven YOLOv5 multi-GPU configuration
 
 ## Configuration
 
