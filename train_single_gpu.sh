@@ -47,7 +47,7 @@ nvidia-smi --query-gpu=index,name,memory.total,memory.free,memory.used,utilizati
 nvidia-smi --query-gpu=timestamp,index,memory.used,memory.free,utilization.gpu --format=csv -l 30 > gpu_memory_single_log.csv &
 NVIDIA_SMI_PID=$!
 
-echo "Started memory monitoring - GPU log: gpu_memory_single_log.csv"
+# Started memory monitoring - GPU log: gpu_memory_single_log.csv
 
 # Single GPU training - increased batch size to utilize full GPU
 python scripts/train_flexible.py \
@@ -62,4 +62,4 @@ python scripts/train_flexible.py \
 
 # Stop memory monitoring
 kill $NVIDIA_SMI_PID 2>/dev/null
-echo "Training completed - memory logs saved"
+# Training completed - memory logs saved

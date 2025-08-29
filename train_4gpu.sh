@@ -60,7 +60,7 @@ NVIDIA_SMI_PID=$!
 top -b -d 30 -o %MEM | head -20 > system_memory_4gpu_log.txt &
 TOP_PID=$!
 
-echo "Started memory monitoring - GPU log: gpu_memory_4gpu_log.csv, System log: system_memory_4gpu_log.txt"
+# Started memory monitoring - GPU log: gpu_memory_4gpu_log.csv, System log: system_memory_4gpu_log.txt
 
 torchrun --nproc_per_node=4 --master_port=29502 scripts/train_flexible.py \
     --batch-size 320 \
@@ -76,7 +76,7 @@ torchrun --nproc_per_node=4 --master_port=29502 scripts/train_flexible.py \
 # Stop memory monitoring
 kill $NVIDIA_SMI_PID 2>/dev/null
 kill $TOP_PID 2>/dev/null
-echo "Training completed - memory logs saved"
+# Training completed - memory logs saved
 
 # Alternative configurations for different scenarios:
 
