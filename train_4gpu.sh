@@ -39,21 +39,17 @@ fi
 # Create logs directory
 mkdir -p logs
 
+# Load required modules (match working YOLOv5 setup)
+module load cuda/11.8
+module load python/3.9
+
+# NCCL configuration (match working YOLOv5 setup)
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
 export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_IB_DISABLE=1
-export NCCL_P2P_DISABLE=0
+export NCCL_P2P_DISABLE=1
 export NCCL_SOCKET_IFNAME=lo
-export TORCH_NCCL_BLOCKING_WAIT=1
-export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
-
-export NCCL_TREE_THRESHOLD=0
-export NCCL_MIN_NCHANNELS=8
-export NCCL_MAX_NCHANNELS=16
-export CUDA_DEVICE_ORDER=PCI_BUS_ID
-export NCCL_ALGO=Tree,Ring
-export NCCL_PROTO=Simple
 
 nvidia-smi
 nvidia-smi topo -m
@@ -69,7 +65,7 @@ TOP_PID=$!
 
 echo "Started memory monitoring - GPU log: gpu_memory_4gpu_log.csv, System log: system_memory_4gpu_log.txt"
 
-torchrun --nproc_per_node=4 --master_port=29502 --nnodes=1 --rdzv_backend=c10d scripts/train_flexible.py \
+torchrun --nproc_per_node=4 --master_port=29502 scripts/train_flexible.py \
     --batch-size 320 \
     --lr 5e-4 \
     --epochs 35 \
@@ -87,7 +83,7 @@ echo "Training completed - memory logs saved"
 
 # Alternative configurations for different scenarios:
 
-# For xs subset (quick testing on RTX Ada 6000):
+# For xs subset (quick testing):
 # torchrun --nproc_per_node=4 --master_port=29502 scripts/train_flexible.py \
 #     --batch-size 256 \
 #     --lr 5e-4 \
@@ -95,11 +91,11 @@ echo "Training completed - memory logs saved"
 #     --mixed-precision \
 #     --num-workers 48 \
 #     --gradient-clip 5.0 \
-#     --output-dir ./outputs_rtx_ada_xs \
+#     --output-dir ./outputs_4gpu_xs \
 #     --dataset gigaspeech \
 #     --subset xs
 
-# For l subset (large dataset on RTX Ada 6000):
+# For l subset (large dataset):
 # torchrun --nproc_per_node=4 --master_port=29502 scripts/train_flexible.py \
 #     --batch-size 512 \
 #     --lr 8e-4 \
@@ -107,6 +103,6 @@ echo "Training completed - memory logs saved"
 #     --mixed-precision \
 #     --num-workers 80 \
 #     --gradient-clip 3.0 \
-#     --output-dir ./outputs_rtx_ada_large \
+#     --output-dir ./outputs_4gpu_large \
 #     --dataset gigaspeech \
 #     --subset l
