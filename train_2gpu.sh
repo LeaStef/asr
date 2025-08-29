@@ -40,10 +40,7 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# Try gloo backend instead of nccl due to NCCL 2.21.5 bugs
-export TORCH_DISTRIBUTED_BACKEND=gloo
-
-# NCCL configuration (kept as fallback)
+# NCCL configuration
 export NCCL_DEBUG=WARN
 export NCCL_IB_DISABLE=1
 export NCCL_P2P_DISABLE=0
